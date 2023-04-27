@@ -69,6 +69,17 @@ impl Image {
         }))))
     }
 
+    /// left decoded image untouch.
+    pub fn new_raw(
+        data: Bytes,
+        format: ImageFormat,
+        size: Axes<u32>,
+        alt: Option<EcoString>,
+    ) -> StrResult<Self> {
+        let loader = PreparedLoader::default();
+        Ok(Self(Arc::new(Prehashed::new(Repr { data, format, size, loader, alt }))))
+    }
+
     /// Create a font-dependant image from a buffer and a format.
     #[comemo::memoize]
     pub fn with_fonts(
