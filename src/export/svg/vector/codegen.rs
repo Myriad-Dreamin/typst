@@ -296,10 +296,11 @@ impl<'s, 'm, 't, Feat: ExportFeature> GroupContext for SvgTextBuilder<'s, 'm, 't
 fn render_path(path: &PathItem) -> String {
     let mut p = vec!["<path ".to_owned()];
     p.push(format!(r#"d="{}" "#, path.d));
+    let mut fill_color = "none";
     for style in &path.styles {
         match style {
             PathStyle::Fill(color) => {
-                p.push(format!(r#"fill="{}" "#, color));
+                fill_color = color;
             }
             PathStyle::Stroke(color) => {
                 p.push(format!(r#"stroke="{}" "#, color));
@@ -331,6 +332,7 @@ fn render_path(path: &PathItem) -> String {
             }
         }
     }
+    p.push(format!(r#"fill="{}" "#, fill_color));
     p.push("/>".to_owned());
     p.join("")
 }
@@ -340,17 +342,10 @@ fn render_path(path: &PathItem) -> String {
 pub fn render_image(image: &Image, size: Size) -> String {
     let image_url = rasterize_embedded_image_url(image).unwrap();
 
-    // resize image to fit the view
-    let size = size;
-    let view_width = size.x.0;
-    let view_height = size.y.0;
-
-    let aspect = (image.width() as f32) / (image.height() as f32);
-
-    let w = view_width.max(aspect * view_height);
-    let h = w / aspect;
+    let w = size.x.0;
+    let h = size.y.0;
     format!(
-        r#"<image x="0" y="0" width="{}" height="{}" xlink:href="{}" />"#,
+        r#"<image x="0" y="0" width="{}" height="{}" style="fill" xlink:href="{}" preserveAspectRatio="none" />"#,
         w, h, image_url
     )
 }

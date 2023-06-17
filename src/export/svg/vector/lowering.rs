@@ -148,9 +148,7 @@ impl LowerBuilder {
             ));
         }
 
-        let glyph_chars: String = text.text[text.glyphs[0].range().start
-            ..text.glyphs[text.glyphs.len() - 1].range().end]
-            .to_string();
+        let glyph_chars: String = text.text.to_string();
 
         let Paint::Solid(fill) = text.fill;
         let fill = fill.to_css().into();
