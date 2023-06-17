@@ -22,7 +22,10 @@ main!(
     bench_eval,
     bench_typeset,
     bench_compile,
+    bench_render_pdf,
     bench_render,
+    bench_render_svg,
+    bench_render_svg_html,
 );
 
 fn bench_decode(iai: &mut Iai) {
@@ -88,10 +91,28 @@ fn bench_compile(iai: &mut Iai) {
     iai.run(|| typst::compile(&world));
 }
 
+fn bench_render_pdf(iai: &mut Iai) {
+    let world = BenchWorld::new();
+    let document = typst::compile(&world).unwrap();
+    iai.run(|| typst::export::pdf(&document))
+}
+
 fn bench_render(iai: &mut Iai) {
     let world = BenchWorld::new();
     let document = typst::compile(&world).unwrap();
     iai.run(|| typst::export::render(&document.pages[0], 1.0, Color::WHITE))
+}
+
+fn bench_render_svg(iai: &mut Iai) {
+    let world = BenchWorld::new();
+    let document = typst::compile(&world).unwrap();
+    iai.run(|| typst::export::svg::render_svg(&document))
+}
+
+fn bench_render_svg_html(iai: &mut Iai) {
+    let world = BenchWorld::new();
+    let document = typst::compile(&world).unwrap();
+    iai.run(|| typst::export::svg::render_svg_html(&document))
 }
 
 struct BenchWorld {
