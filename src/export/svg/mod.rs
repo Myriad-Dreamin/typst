@@ -45,6 +45,7 @@ pub trait ExportFeature {
     const ENABLE_TRACING: bool;
     const SHOULD_RENDER_TEXT_ELEMENT: bool;
     const USE_STABLE_GLYPH_ID: bool;
+    const WITH_RESPONSIVE_JS: bool;
 }
 
 pub struct DefaultExportFeature;
@@ -54,12 +55,23 @@ impl ExportFeature for DefaultExportFeature {
     const ENABLE_TRACING: bool = false;
     const SHOULD_RENDER_TEXT_ELEMENT: bool = true;
     const USE_STABLE_GLYPH_ID: bool = true;
+    const WITH_RESPONSIVE_JS: bool = true;
+}
+
+pub struct SvgExportFeature;
+pub type PlainSvgTask = SvgTask<SvgExportFeature>;
+
+impl ExportFeature for SvgExportFeature {
+    const ENABLE_TRACING: bool = false;
+    const SHOULD_RENDER_TEXT_ELEMENT: bool = false;
+    const USE_STABLE_GLYPH_ID: bool = true;
+    const WITH_RESPONSIVE_JS: bool = false;
 }
 
 type StyleDefMap = HashMap<(StyleNs, ImmutStr), String>;
 type ClipPathMap = HashMap<ImmutStr, u32>;
 
-pub struct SvgTask<Feat: ExportFeature = DefaultExportFeature> {
+pub struct SvgTask<Feat: ExportFeature> {
     glyph_provider: GlyphProvider,
 
     incr: GlyphPackBuilder,
@@ -103,8 +115,8 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
     pub fn fork_render_task<'m, 't>(
         &'t mut self,
         module: &'m flat_ir::Module,
-    ) -> SvgRenderTask<'m, 't, DefaultExportFeature> {
-        SvgRenderTask::<DefaultExportFeature> {
+    ) -> SvgRenderTask<'m, 't, Feat> {
+        SvgRenderTask::<Feat> {
             glyph_provider: self.glyph_provider.clone(),
 
             page_off: 0,
@@ -123,10 +135,8 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
     }
 
     #[cfg(not(feature = "flat-vector"))]
-    pub fn fork_render_task<'m>(
-        &mut self,
-    ) -> SvgRenderTask<'m, '_, DefaultExportFeature> {
-        SvgRenderTask::<DefaultExportFeature> {
+    pub fn fork_render_task<'m>(&mut self) -> SvgRenderTask<'m, '_, Feat> {
+        SvgRenderTask::<Feat> {
             glyph_provider: self.glyph_provider.clone(),
 
             page_off: 0,
@@ -211,7 +221,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
     }
 }
 
-pub struct SvgRenderTask<'m, 't, Feat: ExportFeature = DefaultExportFeature> {
+pub struct SvgRenderTask<'m, 't, Feat: ExportFeature> {
     pub glyph_provider: GlyphProvider,
 
     #[cfg(feature = "flat-vector")]
@@ -274,8 +284,8 @@ impl SvgExporter {
         }
     }
 
-    fn render_template(
-        t: SvgTask,
+    fn render_template<Feat: ExportFeature>(
+        t: SvgTask<Feat>,
         header: String,
         mut body: Vec<SvgText>,
         glyphs: impl IntoIterator<Item = SvgText>,
@@ -299,10 +309,12 @@ impl SvgExporter {
         // body
         svg.append(&mut body);
 
-        // attach the javascript for animations
-        svg.push(r#"<script type="text/javascript">"#.into());
-        svg.push(include_str!("./typst.svg.js").into());
-        svg.push("</script>".into());
+        if Feat::WITH_RESPONSIVE_JS {
+            // attach the javascript for animations
+            svg.push(r#"<script type="text/javascript">"#.into());
+            svg.push(include_str!("./typst.svg.js").into());
+            svg.push("</script>".into());
+        }
 
         // close the svg
         svg.push("</svg>".into());
@@ -310,7 +322,7 @@ impl SvgExporter {
         svg
     }
 
-    fn render_transient_svg(output: &Document) -> Vec<SvgText> {
+    fn render_transient_svg<Feat: ExportFeature>(output: &Document) -> Vec<SvgText> {
         let header = Self::header_doc(output);
 
         let mut lower_builder = LowerBuilder::new(output);
@@ -320,7 +332,7 @@ impl SvgExporter {
             .map(|p| lower_builder.lower(p))
             .collect::<Vec<_>>();
 
-        let mut t = SvgTask::<DefaultExportFeature>::default();
+        let mut t = SvgTask::<Feat>::default();
         let mut svg_body = vec![];
         t.render_transient(output, pages, &mut svg_body);
 
@@ -331,7 +343,7 @@ impl SvgExporter {
     }
 
     fn render_transient_html(output: &Document) -> Vec<SvgText> {
-        let mut svg = Self::render_transient_svg(output);
+        let mut svg = Self::render_transient_svg::<DefaultExportFeature>(output);
         let mut html: Vec<SvgText> = Vec::with_capacity(svg.len() + 3);
         html.push(r#"<html><head><meta charset="utf-8" /><title>"#.into());
         html.push(SvgText::Plain(
@@ -354,7 +366,7 @@ pub fn render_svg_html(output: &Document) -> String {
 }
 
 pub fn render_svg(output: &Document) -> String {
-    generate_text(SvgExporter::render_transient_svg(output))
+    generate_text(SvgExporter::render_transient_svg::<SvgExportFeature>(output))
 }
 
 #[cfg(feature = "flat-vector")]
