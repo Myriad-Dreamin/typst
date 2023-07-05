@@ -74,12 +74,12 @@ impl FileId {
     }
 
     /// Construct from a raw number.
-    pub(crate) const fn from_raw(v: u16) -> Self {
+    pub const fn from_raw(v: u16) -> Self {
         Self(v)
     }
 
     /// Extract the raw underlying number.
-    pub(crate) const fn into_raw(self) -> u16 {
+    pub const fn into_raw(self) -> u16 {
         self.0
     }
 
