@@ -182,6 +182,12 @@ pub struct RawElem {
     #[internal]
     #[parse(theme_data.map(Some))]
     pub theme_data: Option<Bytes>,
+
+    /// Foreground color for syntax highlighting.
+    pub foreground: Option<Color>,
+
+    /// Background color for syntax highlighting.
+    pub background: Option<Color>,
 }
 
 impl RawElem {
@@ -204,6 +210,26 @@ impl RawElem {
 impl Synthesize for RawElem {
     fn synthesize(&mut self, _vt: &mut Vt, styles: StyleChain) -> SourceResult<()> {
         self.push_lang(self.lang(styles));
+
+        let theme = self.theme(styles).map(|theme_path| {
+            load_theme(theme_path, self.theme_data(styles).unwrap()).unwrap()
+        });
+
+        let theme = theme.as_deref().unwrap_or(&THEME);
+
+        println!("synthesize foreground: {:?}", self.foreground(styles));
+
+        let foreground = self
+            .foreground(styles)
+            .or_else(|| theme.settings.foreground.map(to_typst).map(From::from));
+        self.push_foreground(foreground);
+
+        let background = self
+            .background(styles)
+            .or_else(|| theme.settings.background.map(to_typst).map(From::from));
+        self.push_background(background);
+
+        println!("synthesize raw: {:?}", self);
         Ok(())
     }
 }
@@ -218,6 +244,10 @@ impl Show for RawElem {
             .map(|s| s.to_lowercase())
             .or(Some("txt".into()));
 
+        let foreground = self.foreground(styles).map(From::from);
+        let foreground = foreground.as_ref();
+        let background = self.background(styles).map(From::from);
+
         let extra_syntaxes = UnsyncLazy::new(|| {
             load_syntaxes(&self.syntaxes(styles), &self.syntaxes_data(styles)).unwrap()
         });
@@ -227,6 +257,14 @@ impl Show for RawElem {
         });
 
         let theme = theme.as_deref().unwrap_or(&THEME);
+
+        let theme_foreground: Paint = theme
+            .settings
+            .foreground
+            .map(to_typst)
+            .map_or(Color::BLACK, Color::from)
+            .into();
+        let theme_foreground = &theme_foreground;
 
         let mut realized = if matches!(lang.as_deref(), Some("typ" | "typst" | "typc")) {
             let root = match lang.as_deref() {
@@ -241,7 +279,12 @@ impl Show for RawElem {
                 vec![],
                 &highlighter,
                 &mut |node, style| {
-                    seq.push(styled(&text[node.range()], style));
+                    seq.push(styled(
+                        &text[node.range()],
+                        theme_foreground,
+                        foreground,
+                        style,
+                    ));
                 },
             );
 
@@ -266,7 +309,7 @@ impl Show for RawElem {
                 for (style, piece) in
                     highlighter.highlight_line(line, syntax_set).into_iter().flatten()
                 {
-                    seq.push(styled(piece, style));
+                    seq.push(styled(piece, theme_foreground, foreground, style));
                 }
             }
 
@@ -275,14 +318,12 @@ impl Show for RawElem {
             TextElem::packed(text)
         };
 
-        let background = theme.settings.background.map(to_typst);
-
         if self.block(styles) {
             // Align the text before inserting it into the block.
             realized = realized.aligned(Axes::with_x(Some(self.align(styles).into())));
             realized = BlockElem::new()
                 .with_body(Some(realized))
-                .with_fill(background.map(From::from))
+                .with_fill(background)
                 .pack();
         }
 
@@ -365,11 +406,21 @@ fn highlight_themed<F>(
 }
 
 /// Style a piece of text with a syntect style.
-fn styled(piece: &str, style: synt::Style) -> Content {
+fn styled(
+    piece: &str,
+    theme_foreground: &Paint,
+    foreground: Option<&Paint>,
+    style: synt::Style,
+) -> Content {
     let mut body = TextElem::packed(piece);
 
     let paint = to_typst(style.foreground).into();
-    body = body.styled(TextElem::set_fill(paint));
+
+    if &paint != theme_foreground {
+        body = body.styled(TextElem::set_fill(paint));
+    } else if let Some(foreground) = foreground {
+        body = body.styled(TextElem::set_fill(foreground.clone()));
+    }
 
     if style.font_style.contains(synt::FontStyle::BOLD) {
         body = body.strong();
