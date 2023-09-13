@@ -42,7 +42,7 @@ impl Span {
     /// Create a new span from a source id and a unique number.
     ///
     /// Returns `None` if `number` is not contained in `FULL`.
-    pub(super) const fn new(id: FileId, number: u64) -> Option<Self> {
+    pub const fn new(id: FileId, number: u64) -> Option<Self> {
         if number < Self::FULL.start || number >= Self::FULL.end {
             return None;
         }
