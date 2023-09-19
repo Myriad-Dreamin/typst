@@ -53,21 +53,22 @@ impl Image {
         format: ImageFormat,
         alt: Option<EcoString>,
     ) -> StrResult<Self> {
-        let loader = PreparedLoader::default();
-        let decoded = match format {
-            ImageFormat::Raster(format) => decode_raster(&data, format)?,
-            ImageFormat::Vector(VectorFormat::Svg) => {
-                decode_svg(&data, (&loader as &dyn SvgFontLoader).track())?
-            }
-        };
+        todo!()
+        // let loader = PreparedLoader::default();
+        // let decoded = match format {
+        //     ImageFormat::Raster(format) => decode_raster(&data, format)?,
+        //     ImageFormat::Vector(VectorFormat::Svg) => {
+        //         decode_svg(&data, (&loader as &dyn SvgFontLoader).track())?
+        //     }
+        // };
 
-        Ok(Self(Arc::new(Prehashed::new(Repr {
-            data,
-            format,
-            size: decoded.size(),
-            loader,
-            alt,
-        }))))
+        // Ok(Self(Arc::new(Prehashed::new(Repr {
+        //     data,
+        //     format,
+        //     size: decoded.size(),
+        //     loader,
+        //     alt,
+        // }))))
     }
 
     /// left decoded image untouch.
@@ -90,21 +91,22 @@ impl Image {
         fallback_family: Option<EcoString>,
         alt: Option<EcoString>,
     ) -> StrResult<Self> {
-        let loader = WorldLoader::new(world, fallback_family);
-        let decoded = match format {
-            ImageFormat::Raster(format) => decode_raster(&data, format)?,
-            ImageFormat::Vector(VectorFormat::Svg) => {
-                decode_svg(&data, (&loader as &dyn SvgFontLoader).track())?
-            }
-        };
+        todo!()
+        // let loader = WorldLoader::new(world, fallback_family);
+        // let decoded = match format {
+        //     ImageFormat::Raster(format) => decode_raster(&data, format)?,
+        //     ImageFormat::Vector(VectorFormat::Svg) => {
+        //         decode_svg(&data, (&loader as &dyn SvgFontLoader).track())?
+        //     }
+        // };
 
-        Ok(Self(Arc::new(Prehashed::new(Repr {
-            data,
-            format,
-            size: decoded.size(),
-            loader: loader.into_prepared(),
-            alt,
-        }))))
+        // Ok(Self(Arc::new(Prehashed::new(Repr {
+        //     data,
+        //     format,
+        //     size: decoded.size(),
+        //     loader: loader.into_prepared(),
+        //     alt,
+        // }))))
     }
 
     /// The raw image data.
@@ -139,13 +141,14 @@ impl Image {
 
     /// The decoded version of the image.
     pub fn decoded(&self) -> Rc<DecodedImage> {
-        match self.format() {
-            ImageFormat::Raster(format) => decode_raster(self.data(), format),
-            ImageFormat::Vector(VectorFormat::Svg) => {
-                decode_svg(self.data(), (&self.0.loader as &dyn SvgFontLoader).track())
-            }
-        }
-        .unwrap()
+        todo!()
+        // match self.format() {
+        //     ImageFormat::Raster(format) => decode_raster(self.data(),
+        // format),     ImageFormat::Vector(VectorFormat::Svg) => {
+        //         decode_svg(self.data(), (&self.0.loader as &dyn
+        // SvgFontLoader).track())     }
+        // }
+        // .unwrap()
     }
 }
 
