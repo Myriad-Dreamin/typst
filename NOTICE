@@ -225,27 +225,27 @@ The syntax definitions are used under their respective licenses.
 ================================================================================
 The SIL Open Font License Version 1.1 applies to:
 
-* IBM Plex fonts in assets/fonts/IBMPlex*.ttf
+* IBM Plex fonts in IBMPlex*.ttf
   Copyright © 2017 IBM Corp. with Reserved Font Name "Plex"
   (https://github.com/IBM/plex)
 
-* Noto fonts in assets/fonts/Noto*.ttf
+* Noto fonts in Noto*.ttf
   Copyright 2018 The Noto Project Authors
   (https://github.com/googlei18n/noto-fonts)
 
-* PT Sans fonts in assets/fonts/PTSans*.ttf
+* PT Sans fonts in PTSans*.ttf
   Copyright (c) 2010, ParaType Ltd. (http://www.paratype.com/public),
   with Reserved Font Names "PT Sans" and "ParaType".
 
-* Fira Math fonts in assets/fonts/FiraMath*.otf
+* Fira Math fonts in FiraMath*.otf
   Copyright (C) 2018--2021 by Xiangdong Zeng <xdzeng96@gmail.com>
   (https://github.com/firamath/firamath)
 
-* Inria fonts in assets/fonts/Inria*.ttf
+* Inria fonts in Inria*.ttf
   Copyright 2017 The Inria Sans Project Authors
   (https://github.com/BlackFoundryCom/InriaFonts)
 
-* Linux Libertine fonts in assets/fonts/LinLibertine*.ttf
+* Linux Libertine fonts in LinLibertine*.ttf
   Copyright (c) 2003–2012, Philipp H. Poll
   (www.linuxlibertine.org | gillian at linuxlibertine.org),
   with Reserved Font Name "Linux Libertine" and "Biolinum".
@@ -341,7 +341,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 ================================================================================
 The Apache License Version 2.0 applies to:
 
-* Roboto fonts in assets/fonts/Roboto*.ttf
+* Roboto fonts in Roboto*.ttf
   (https://github.com/googlefonts/roboto)
 
                                  Apache License
@@ -525,7 +525,7 @@ The Apache License Version 2.0 applies to:
 ================================================================================
 The Ubuntu Font License Version 1.0 applies to:
 
-* Ubuntu fonts in assets/fonts/Ubuntu*.ttf
+* Ubuntu fonts in Ubuntu*.ttf
   (https://design.ubuntu.com/font/)
 
 -------------------------------
@@ -630,10 +630,10 @@ DEALINGS IN THE FONT SOFTWARE.
 ================================================================================
 The GUST Font License Version 1.0 applies to:
 
-* Latin Modern fonts in assets/fonts/LatinModern*.otf
+* Latin Modern fonts in LatinModern*.otf
   (http://www.gust.org.pl/projects/e-foundry/lm-math)
 
-* NewComputerModern fonts in assets/fonts/NewCM*.otf
+* NewComputerModern fonts in NewCM*.otf
 
 % This is version 1.0, dated 22 June 2009, of the GUST Font License.
 % (GUST is the Polish TeX Users Group, http://www.gust.org.pl)
@@ -668,7 +668,7 @@ The GUST Font License Version 1.0 applies to:
 ================================================================================
 The Creative Commons Attribution 4.0 International License applies to:
 
-* Twitter Color Emoji font in assets/fonts/TwitterColorEmoji.ttf
+* Twitter Color Emoji font in TwitterColorEmoji.ttf
   Copyright 2016 Brad Erickson
   Copyright 2016 Twitter, Inc.
   (https://github.com/eosrei/twemoji-color-font)
@@ -1082,7 +1082,7 @@ Creative Commons may be contacted at creativecommons.org.
 ================================================================================
 The terms below apply to:
 
-* DejaVu fonts in assets/fonts/DejaVu*.ttf
+* DejaVu fonts in DejaVu*.ttf
   (https://github.com/dejavu-fonts/dejavu-fonts)
 
 Fonts are (c) Bitstream (see below). DejaVu changes are in public domain.
