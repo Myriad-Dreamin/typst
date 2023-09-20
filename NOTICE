@@ -124,7 +124,7 @@ http://creativecommons.org/publicdomain/zero/1.0/
 ================================================================================
 The 0BSD License applies to:
 
-* The S-Expression sublime-syntax in `assets/files/SExpressions.sublime-syntax`
+* The S-Expression sublime-syntax in `SExpressions.sublime-syntax`
   which is adapted from the S-Expression syntax definition in the Sublime Text
   package `S-Expressions` (https://github.com/whitequark/Sublime-S-Expressions)
 
@@ -146,7 +146,7 @@ OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ================================================================================
 The MIT License applies to:
 
-* The tmTheme in `assets/files/halcyon.tmTheme`
+* The tmTheme in `halcyon.tmTheme`
   Copyright (c) 2018 Brittany Chiang
   in the Sublime Text package `Halcyon` (https://github.com/bchiang7/Halcyon)
 
@@ -678,7 +678,7 @@ The Creative Commons Attribution 4.0 International License applies to:
   Copyright 2020 Twitter, Inc and other contributors
   (https://github.com/twitter/twemoji)
 
-* Monkey emoji in assets/files/monkey.svg
+* Monkey emoji in monkey.svg
   Copyright 2018 Vincent Le Moign, Streamline Emoji Project
   Via Wikimedia Commons
   (https://commons.wikimedia.org/wiki/File:440-monkey.svg)
