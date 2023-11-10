@@ -1,4 +1,5 @@
 use std::fs;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use chrono::{Datelike, Timelike};
@@ -7,10 +8,11 @@ use codespan_reporting::term::{self, termcolor};
 use termcolor::{ColorChoice, StandardStream};
 use typst::diag::{bail, Severity, SourceDiagnostic, StrResult};
 use typst::doc::Document;
-use typst::eval::{eco_format, Datetime, Tracer};
+use typst::eval::{eco_format, Datetime, Repr, Tracer, Value};
 use typst::geom::Color;
 use typst::syntax::{FileId, Source, Span};
 use typst::{World, WorldExt};
+use typst_library::meta::{enable_print, get_prints};
 
 use crate::args::{CompileCommand, DiagnosticFormat, OutputFormat};
 use crate::watch::Status;
@@ -80,7 +82,10 @@ pub fn compile_once(
     world.source(world.main()).map_err(|err| err.to_string())?;
 
     let mut tracer = Tracer::new();
+    enable_print(&mut tracer);
+
     let result = typst::compile(world, &mut tracer);
+    let values = get_prints(&tracer);
     let warnings = tracer.warnings();
 
     match result {
@@ -96,6 +101,23 @@ pub fn compile_once(
                 } else {
                     Status::PartialSuccess(duration).print(command).unwrap();
                 }
+            }
+
+            let mut stdout = std::io::stdout().lock();
+            for values in values.iter().flatten() {
+                let Value::Array(values) = values else {
+                    unreachable!();
+                };
+                for (i, value) in values.into_iter().enumerate() {
+                    if i > 0 {
+                        write!(stdout, " ").unwrap();
+                    }
+                    match value {
+                        Value::Str(val) => write!(stdout, "{val}", val = val).unwrap(),
+                        _ => write!(stdout, "{value}", value = value.repr()).unwrap(),
+                    }
+                }
+                writeln!(stdout).unwrap();
             }
 
             print_diagnostics(world, &[], &warnings, command.common.diagnostic_format)
