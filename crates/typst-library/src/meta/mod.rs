@@ -15,6 +15,8 @@ mod metadata;
 #[path = "numbering.rs"]
 mod numbering_;
 mod outline;
+#[path = "print.rs"]
+mod print_;
 #[path = "query.rs"]
 mod query_;
 mod reference;
@@ -33,6 +35,7 @@ pub use self::link::*;
 pub use self::metadata::*;
 pub use self::numbering_::*;
 pub use self::outline::*;
+pub use self::print_::*;
 pub use self::query_::*;
 pub use self::reference::*;
 pub use self::state::*;
@@ -64,6 +67,7 @@ pub(super) fn define(global: &mut Scope) {
     global.define_func::<numbering>();
     global.define_func::<query>();
     global.define_func::<handle_effect>();
+    global.define_func::<print>();
 }
 
 /// An element that has a local name.
