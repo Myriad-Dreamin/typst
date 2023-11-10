@@ -1,5 +1,6 @@
 mod args;
 mod compile;
+mod debug;
 mod download;
 mod fonts;
 mod package;

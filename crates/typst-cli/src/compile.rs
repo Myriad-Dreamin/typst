@@ -15,6 +15,7 @@ use typst::{World, WorldExt};
 use typst_library::meta::{enable_print, get_prints};
 
 use crate::args::{CompileCommand, DiagnosticFormat, OutputFormat};
+use crate::debug::{BreakpointToken, DebuggerHost};
 use crate::watch::Status;
 use crate::world::SystemWorld;
 use crate::{color_stream, set_failed};
@@ -83,6 +84,15 @@ pub fn compile_once(
 
     let mut tracer = Tracer::new();
     enable_print(&mut tracer);
+    let _breakpoint = command.debug.then(|| {
+        let host = DebuggerHost::default();
+        let breakpoint = BreakpointToken::new(Box::new(move |vm, args, _tok| {
+            host.handle(vm, args);
+        }));
+
+        crate::debug::enable_breakpoint(&mut tracer, &breakpoint);
+        breakpoint
+    });
 
     let result = typst::compile(world, &mut tracer);
     let values = get_prints(&tracer);

@@ -309,6 +309,10 @@ impl<'a> Vm<'a> {
         }
         self.scopes.top.define(var.get().clone(), value);
     }
+
+    pub fn scopes(&self) -> &Scopes {
+        &self.scopes
+    }
 }
 
 /// A control flow event that occurred during evaluation.

@@ -71,6 +71,9 @@ pub struct CompileCommand {
     /// Produces a flamegraph of the compilation process
     #[arg(long = "flamegraph", value_name = "OUTPUT_SVG")]
     pub flamegraph: Option<Option<PathBuf>>,
+
+    #[arg(long = "debug", default_value_t = false)]
+    pub debug: bool,
 }
 
 /// Processes an input file to extract provided metadata
