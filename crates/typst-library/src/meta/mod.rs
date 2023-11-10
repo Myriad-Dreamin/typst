@@ -5,6 +5,8 @@ mod cite;
 mod context;
 mod counter;
 mod document;
+#[path = "effect.rs"]
+mod effect_;
 mod figure;
 mod footnote;
 mod heading;
@@ -23,6 +25,7 @@ pub use self::cite::*;
 pub use self::context::*;
 pub use self::counter::*;
 pub use self::document::*;
+pub use self::effect_::*;
 pub use self::figure::*;
 pub use self::footnote::*;
 pub use self::heading::*;
@@ -60,6 +63,7 @@ pub(super) fn define(global: &mut Scope) {
     global.define_func::<layout>();
     global.define_func::<numbering>();
     global.define_func::<query>();
+    global.define_func::<handle_effect>();
 }
 
 /// An element that has a local name.

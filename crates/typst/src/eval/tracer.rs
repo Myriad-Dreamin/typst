@@ -12,6 +12,7 @@ use crate::util::hash128;
 pub struct Tracer {
     inspected: Option<Span>,
     values: EcoVec<Value>,
+    effects: Vec<Value>,
     warnings: EcoVec<SourceDiagnostic>,
     warnings_set: HashSet<u128>,
 }
@@ -36,6 +37,11 @@ impl Tracer {
         self.values
     }
 
+    /// Get the results for the effect handlers.
+    pub fn effects(self) -> Vec<Value> {
+        self.effects
+    }
+
     /// Get the stored warnings.
     pub fn warnings(self) -> EcoVec<SourceDiagnostic> {
         self.warnings
@@ -51,6 +57,22 @@ impl Tracer {
         } else {
             None
         }
+    }
+
+    /// Get effect entry for the effect handlers.
+    pub fn get_effect(&self, st: u16) -> Option<&Value> {
+        let st = st as usize;
+        self.effects.get(st)
+    }
+
+    /// Set effect entry for the effect handlers.
+    pub fn set_effect(&mut self, st: u16, val: Value) {
+        let st = st as usize;
+        if self.effects.len() <= st {
+            self.effects.resize(st + 1, Value::None);
+        }
+
+        self.effects[st] = val
     }
 
     /// Trace a value for the span.
