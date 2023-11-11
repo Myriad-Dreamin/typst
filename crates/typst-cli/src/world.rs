@@ -258,8 +258,10 @@ impl PathSlot {
     fn source(&self) -> FileResult<Source> {
         self.source.get_or_init(&self.path, |data, prev| {
             let text = decode_utf8(&data)?;
+            let (_breakpoints, text) =
+                crate::debug::instrument_breakpoints(self.id, text);
             if let Some(mut prev) = prev {
-                prev.replace(text);
+                prev.replace(&text);
                 Ok(prev)
             } else {
                 Ok(Source::new(self.id, text.into()))

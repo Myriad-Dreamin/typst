@@ -77,18 +77,7 @@ pub fn breakpoint(
     vm: &mut Vm,
     /// The arguments for effect handler.
     arguments: Array,
-    /// Can be an arbitrary location, as its value is irrelevant for the
-    /// function's return value. Why is it required then? As noted before, Typst
-    /// has to evaluate parts of your code multiple times to determine the
-    /// values of all state. By only allowing this function within
-    /// [`locate`]($locate) calls, the amount of code that can depend on the
-    /// query's result is reduced. If you could call it directly at the top
-    /// level of a module, the evaluation of the whole module and its exports
-    /// could depend on the query's result.
-    location: Location,
 ) -> Value {
-    let _ = location;
-
     breakpoint_raw(vm, arguments)
 }
 

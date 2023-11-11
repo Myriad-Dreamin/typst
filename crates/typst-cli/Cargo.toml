@@ -58,6 +58,7 @@ tracing-subscriber = { workspace = true }
 ureq = { workspace = true }
 xz2 = { workspace = true, optional = true }
 zip = { workspace = true, optional = true }
+dap = { git = "https://github.com/sztomi/dap-rs", rev = "44c0aea6151f37b5411ab71d7d355fa3fc9b1ece" }
 
 [build-dependencies]
 clap = { workspace = true, features = ["string"] }

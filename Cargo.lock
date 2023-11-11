@@ -609,6 +609,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "dap"
+version = "0.4.1-alpha1"
+source = "git+https://github.com/sztomi/dap-rs?rev=44c0aea6151f37b5411ab71d7d355fa3fc9b1ece#44c0aea6151f37b5411ab71d7d355fa3fc9b1ece"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "dashmap"
 version = "5.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2932,6 +2942,7 @@ dependencies = [
  "clap_mangen",
  "codespan-reporting",
  "comemo",
+ "dap",
  "dirs",
  "ecow",
  "env_proxy",

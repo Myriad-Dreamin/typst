@@ -1,6 +1,7 @@
 use std::fs;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use chrono::{Datelike, Timelike};
 use codespan_reporting::diagnostic::{Diagnostic, Label};
@@ -63,6 +64,25 @@ pub fn compile(mut command: CompileCommand) -> StrResult<()> {
     Ok(())
 }
 
+struct TeeRead<R, W> {
+    r: R,
+    w: W,
+}
+
+impl<R, W> TeeRead<R, W> {
+    fn new(r: R, w: W) -> Self {
+        Self { r, w }
+    }
+}
+
+impl<R: Read, W: Write> std::io::Read for TeeRead<R, W> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        let n = self.r.read(buf)?;
+        self.w.write_all(&buf[..n])?;
+        Ok(n)
+    }
+}
+
 /// Compile a single time.
 ///
 /// Returns whether it compiled without errors.
@@ -83,78 +103,109 @@ pub fn compile_once(
     world.source(world.main()).map_err(|err| err.to_string())?;
 
     let mut tracer = Tracer::new();
-    enable_print(&mut tracer);
-    let _breakpoint = command.debug.then(|| {
-        let host = DebuggerHost::default();
+
+    let debug = command.debug.then(|| {
+        use dap::prelude::*;
+        use std::io::{BufReader, BufWriter};
+
+        let mirror = std::fs::File::create("mirror.log").unwrap();
+        let input = BufReader::new(TeeRead::new(std::io::stdin(), mirror));
+
+        let output = BufWriter::new(std::io::stdout());
+        let server = Server::new(input, output);
+
+        let host = Arc::new(DebuggerHost::new(server));
+
+        host.wait_init().unwrap();
+
+        let bh = host.clone();
         let breakpoint = BreakpointToken::new(Box::new(move |vm, args, _tok| {
-            host.handle(vm, args);
+            bh.handle(vm, args);
         }));
 
         crate::debug::enable_breakpoint(&mut tracer, &breakpoint);
-        breakpoint
+        (host, breakpoint)
     });
 
+    if debug.is_none() {
+        enable_print(&mut tracer);
+    }
+
     let result = typst::compile(world, &mut tracer);
-    let values = get_prints(&tracer);
-    let warnings = tracer.warnings();
 
-    match result {
-        // Export the PDF / PNG.
-        Ok(document) => {
-            export(world, &document, command, watching)?;
-            let duration = start.elapsed();
+    if debug.is_none() {
+        let values = get_prints(&tracer);
+        let warnings = tracer.warnings();
 
-            tracing::info!("Compilation succeeded in {duration:?}");
-            if watching {
-                if warnings.is_empty() {
-                    Status::Success(duration).print(command).unwrap();
-                } else {
-                    Status::PartialSuccess(duration).print(command).unwrap();
-                }
-            }
+        match result {
+            // Export the PDF / PNG.
+            Ok(document) => {
+                export(world, &document, command, watching)?;
+                let duration = start.elapsed();
 
-            let mut stdout = std::io::stdout().lock();
-            for values in values.iter().flatten() {
-                let Value::Array(values) = values else {
-                    unreachable!();
-                };
-                for (i, value) in values.into_iter().enumerate() {
-                    if i > 0 {
-                        write!(stdout, " ").unwrap();
-                    }
-                    match value {
-                        Value::Str(val) => write!(stdout, "{val}", val = val).unwrap(),
-                        _ => write!(stdout, "{value}", value = value.repr()).unwrap(),
+                tracing::info!("Compilation succeeded in {duration:?}");
+                if watching {
+                    if warnings.is_empty() {
+                        Status::Success(duration).print(command).unwrap();
+                    } else {
+                        Status::PartialSuccess(duration).print(command).unwrap();
                     }
                 }
-                writeln!(stdout).unwrap();
-            }
 
-            print_diagnostics(world, &[], &warnings, command.common.diagnostic_format)
+                let mut stdout = std::io::stdout().lock();
+                for values in values.iter().flatten() {
+                    let Value::Array(values) = values else {
+                        unreachable!();
+                    };
+                    for (i, value) in values.into_iter().enumerate() {
+                        if i > 0 {
+                            write!(stdout, " ").unwrap();
+                        }
+                        match value {
+                            Value::Str(val) => {
+                                write!(stdout, "{val}", val = val).unwrap()
+                            }
+                            _ => write!(stdout, "{value}", value = value.repr()).unwrap(),
+                        }
+                    }
+                    writeln!(stdout).unwrap();
+                }
+
+                print_diagnostics(
+                    world,
+                    &[],
+                    &warnings,
+                    command.common.diagnostic_format,
+                )
                 .map_err(|err| eco_format!("failed to print diagnostics ({err})"))?;
 
-            if let Some(open) = command.open.take() {
-                open_file(open.as_deref(), &command.output())?;
-            }
-        }
-
-        // Print diagnostics.
-        Err(errors) => {
-            set_failed();
-            tracing::info!("Compilation failed");
-
-            if watching {
-                Status::Error.print(command).unwrap();
+                if let Some(open) = command.open.take() {
+                    open_file(open.as_deref(), &command.output())?;
+                }
             }
 
-            print_diagnostics(
-                world,
-                &errors,
-                &warnings,
-                command.common.diagnostic_format,
-            )
-            .map_err(|err| eco_format!("failed to print diagnostics ({err})"))?;
+            // Print diagnostics.
+            Err(errors) => {
+                set_failed();
+                tracing::info!("Compilation failed");
+
+                if watching {
+                    Status::Error.print(command).unwrap();
+                }
+
+                print_diagnostics(
+                    world,
+                    &errors,
+                    &warnings,
+                    command.common.diagnostic_format,
+                )
+                .map_err(|err| eco_format!("failed to print diagnostics ({err})"))?;
+            }
         }
+    }
+
+    if let Some((host, ..)) = debug {
+        host.send_terminated().unwrap();
     }
 
     Ok(())
