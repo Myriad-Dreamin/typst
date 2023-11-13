@@ -168,6 +168,7 @@ fn render_frame(canvas: &mut sk::Pixmap, state: State, frame: &Frame) {
                 Meta::Link(_) => {}
                 Meta::Elem(_) => {}
                 Meta::Hide => {}
+                Meta::ContentHint(_) => {}
             },
         }
     }
