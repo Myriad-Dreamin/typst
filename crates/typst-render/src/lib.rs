@@ -167,6 +167,7 @@ fn render_frame(canvas: &mut sk::Pixmap, state: State, frame: &Frame) {
                 Meta::PageNumbering(_) => {}
                 Meta::PdfPageLabel(_) => {}
                 Meta::Hide => {}
+                Meta::ContentHint(_) => {}
             },
         }
     }

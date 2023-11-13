@@ -81,7 +81,7 @@ pub(super) enum Breakpoint {
 /// composability and flexibility of external iteration anyway.
 pub(super) fn breakpoints<'a>(
     p: &'a Preparation<'a>,
-    mut f: impl FnMut(usize, Breakpoint),
+    mut f: impl FnMut(usize, Breakpoint, char),
 ) {
     let text = p.bidi.text;
     let hyphenate = p.hyphenate != Some(false);
@@ -95,12 +95,14 @@ pub(super) fn breakpoints<'a>(
     let mut iter = segmenter.segment_str(text).peekable();
 
     loop {
+        let mut eaten = '\0';
+
         // Special case for links. UAX #14 doesn't handle them well.
         let (head, tail) = text.split_at(last);
         if head.ends_with("://") || tail.starts_with("www.") {
             let (link, _) = link_prefix(tail);
             let end = last + link.len();
-            linebreak_link(link, |i| f(last + i, Breakpoint::Normal));
+            linebreak_link(link, |i| f(last + i, Breakpoint::Normal, eaten));
             while iter.peek().map_or(false, |&p| p < end) {
                 iter.next();
             }
@@ -126,6 +128,10 @@ pub(super) fn breakpoints<'a>(
                 | LineBreak::CarriageReturn
                 | LineBreak::LineFeed
                 | LineBreak::NextLine => Breakpoint::Mandatory,
+                LineBreak::Space => {
+                    eaten = c;
+                    Breakpoint::Normal
+                }
                 _ => Breakpoint::Normal,
             }
         };
@@ -170,12 +176,12 @@ pub(super) fn breakpoints<'a>(
                 }
 
                 // Call `f` for the word-internal hyphenation opportunity.
-                f(offset, Breakpoint::Hyphen);
+                f(offset, Breakpoint::Hyphen, eaten);
             }
         }
 
         // Call `f` for the UAX #14 break opportunity.
-        f(point, breakpoint);
+        f(point, breakpoint, eaten);
 
         last = point;
     }

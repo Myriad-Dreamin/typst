@@ -5,6 +5,7 @@ use std::sync::Arc;
 use ecow::{eco_format, EcoString, EcoVec};
 use once_cell::sync::Lazy;
 use once_cell::unsync::Lazy as UnsyncLazy;
+use smallvec::smallvec;
 use syntect::highlighting as synt;
 use syntect::parsing::{SyntaxDefinition, SyntaxSet, SyntaxSetBuilder};
 use unicode_segmentation::UnicodeSegmentation;
@@ -15,6 +16,7 @@ use crate::foundations::{
     cast, elem, scope, Args, Array, Bytes, Content, Finalize, Fold, NativeElement,
     PlainText, Show, Smart, StyleChain, Styles, Synthesize, Value,
 };
+use crate::introspection::{Meta, MetaElem};
 use crate::layout::{BlockElem, Em, HAlign};
 use crate::model::Figurable;
 use crate::syntax::{split_newlines, LinkedNode, Spanned};
@@ -337,7 +339,10 @@ impl Synthesize for RawElem {
                             i + 1,
                             count,
                             EcoString::from(&text[range]),
-                            Content::sequence(line.drain(..)),
+                            Content::sequence(line.drain(..))
+                                + MetaElem::new().pack().styled(MetaElem::set_data(
+                                    smallvec![Meta::ContentHint('\n')],
+                                )),
                         )
                         .spanned(self.span()),
                     );
@@ -368,7 +373,10 @@ impl Synthesize for RawElem {
                         i as i64 + 1,
                         count,
                         EcoString::from(line),
-                        Content::sequence(line_content),
+                        Content::sequence(line_content)
+                            + MetaElem::new().pack().styled(MetaElem::set_data(
+                                smallvec![Meta::ContentHint('\n'),],
+                            )),
                     )
                     .spanned(self.span()),
                 );

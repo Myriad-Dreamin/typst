@@ -6,7 +6,7 @@ use crate::foundations::{
     elem, Content, Finalize, Guard, NativeElement, Resolve, Show, Smart, StyleChain,
     Synthesize,
 };
-use crate::introspection::{Count, Counter, CounterUpdate, Locatable};
+use crate::introspection::{Count, Counter, CounterUpdate, Locatable, Meta, MetaElem};
 use crate::layout::{
     Abs, Align, AlignElem, Axes, Dir, Em, FixedAlign, Fragment, Layout, Point, Regions,
     Size,
@@ -19,7 +19,7 @@ use crate::text::{
 };
 use crate::util::{option_eq, NonZeroExt, Numeric};
 use crate::World;
-
+use smallvec::smallvec;
 /// A mathematical equation.
 ///
 /// Can be displayed inline with text or as a separate block.
@@ -126,7 +126,10 @@ impl Finalize for EquationElem {
     fn finalize(&self, realized: Content, style: StyleChain) -> Content {
         let mut realized = realized;
         if self.block(style) {
-            realized = realized.styled(AlignElem::set_alignment(Align::CENTER));
+            realized = realized.styled(AlignElem::set_alignment(Align::CENTER))
+                + MetaElem::new()
+                    .pack()
+                    .styled(MetaElem::set_data(smallvec![Meta::ContentHint('\n')]));
         }
         realized
             .styled(TextElem::set_weight(FontWeight::from_number(450)))
