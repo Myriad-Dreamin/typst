@@ -210,7 +210,10 @@ impl Finalize for EquationElem {
     fn finalize(&self, realized: Content, style: StyleChain) -> Content {
         let mut realized = realized;
         if self.block(style) {
-            realized = realized.styled(AlignElem::set_alignment(Align::CENTER));
+            realized = realized.styled(AlignElem::set_alignment(Align::CENTER))
+                + MetaElem::new()
+                    .pack()
+                    .styled(MetaElem::set_data(vec![Meta::ContentHint('\n')]));
         }
         realized
             .styled(TextElem::set_weight(FontWeight::from_number(450)))

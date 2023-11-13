@@ -447,6 +447,8 @@ struct Line<'a> {
     /// Whether the line ends with a hyphen or dash, either naturally or through
     /// hyphenation.
     dash: bool,
+    /// Eaten space at the end of the line.
+    eaten: char,
 }
 
 impl<'a> Line<'a> {
@@ -887,9 +889,9 @@ fn linebreak_simple<'a>(vt: &Vt, p: &'a Preparation<'a>, width: Abs) -> Vec<Line
     let mut start = 0;
     let mut last = None;
 
-    breakpoints(p, |end, breakpoint| {
+    breakpoints(p, |end, breakpoint, eaten| {
         // Compute the line and its size.
-        let mut attempt = line(vt, p, start..end, breakpoint);
+        let mut attempt = line(vt, p, start..end, breakpoint, eaten);
 
         // If the line doesn't fit anymore, we push the last fitting attempt
         // into the stack and rebuild the line from the attempt's end. The
@@ -898,7 +900,7 @@ fn linebreak_simple<'a>(vt: &Vt, p: &'a Preparation<'a>, width: Abs) -> Vec<Line
             if let Some((last_attempt, last_end)) = last.take() {
                 lines.push(last_attempt);
                 start = last_end;
-                attempt = line(vt, p, start..end, breakpoint);
+                attempt = line(vt, p, start..end, breakpoint, eaten);
             }
         }
 
@@ -961,12 +963,12 @@ fn linebreak_optimized<'a>(vt: &Vt, p: &'a Preparation<'a>, width: Abs) -> Vec<L
     let mut table = vec![Entry {
         pred: 0,
         total: 0.0,
-        line: line(vt, p, 0..0, Breakpoint::Mandatory),
+        line: line(vt, p, 0..0, Breakpoint::Mandatory, '\0'),
     }];
 
     let em = TextElem::size_in(p.styles);
 
-    breakpoints(p, |end, breakpoint| {
+    breakpoints(p, |end, breakpoint, eaten| {
         let k = table.len();
         let eof = end == p.bidi.text.len();
         let mut best: Option<Entry> = None;
@@ -976,7 +978,7 @@ fn linebreak_optimized<'a>(vt: &Vt, p: &'a Preparation<'a>, width: Abs) -> Vec<L
             // Layout the line.
             let start = pred.line.end;
 
-            let attempt = line(vt, p, start..end, breakpoint);
+            let attempt = line(vt, p, start..end, breakpoint, eaten);
 
             // Determine how much the line's spaces would need to be stretched
             // to make it the desired width.
@@ -1090,6 +1092,7 @@ fn line<'a>(
     p: &'a Preparation,
     mut range: Range,
     breakpoint: Breakpoint,
+    eaten: char,
 ) -> Line<'a> {
     let end = range.end;
     let mut justify =
@@ -1106,6 +1109,7 @@ fn line<'a>(
             width: Abs::zero(),
             justify,
             dash: false,
+            eaten,
         };
     }
 
@@ -1257,6 +1261,7 @@ fn line<'a>(
         width,
         justify,
         dash,
+        eaten,
     }
 }
 
@@ -1300,6 +1305,15 @@ fn finalize(
         let second = frames.pop().unwrap();
         let first = frames.last_mut().unwrap();
         merge(first, second, leading);
+    }
+
+    if expand {
+        if let Some(par_frame) = frames.last_mut() {
+            par_frame.push(
+                Point::zero(),
+                FrameItem::Meta(Meta::ContentHint('\n'), Size::zero()),
+            );
+        }
     }
 
     Ok(Fragment::frames(frames))
@@ -1441,6 +1455,13 @@ fn commit(
         let x = offset + p.align.position(remaining);
         let y = top - frame.baseline();
         output.push_frame(Point::new(x, y), frame);
+    }
+
+    if line.eaten != '\0' {
+        output.push(
+            Point::new(size.x, size.y),
+            FrameItem::Meta(Meta::ContentHint(line.eaten), Size::zero()),
+        );
     }
 
     Ok(output)

@@ -747,6 +747,8 @@ pub enum Meta {
     PageNumbering(Value),
     /// A PDF page label of the current page.
     PdfPageLabel(PdfPageLabel),
+    /// Indicates that there is a new line
+    ContentHint(char),
     /// Indicates that content should be hidden. This variant doesn't appear
     /// in the final frames as it is removed alongside the content that should
     /// be hidden.
@@ -764,6 +766,7 @@ impl Debug for Meta {
             Self::Elem(content) => write!(f, "Elem({:?})", content.func()),
             Self::PageNumbering(value) => write!(f, "PageNumbering({value:?})"),
             Self::PdfPageLabel(label) => write!(f, "PdfPageLabel({label:?})"),
+            Self::ContentHint(ch) => write!(f, "Content({ch})"),
             Self::Hide => f.pad("Hide"),
         }
     }
