@@ -683,6 +683,7 @@ fn write_frame(ctx: &mut PageContext, frame: &Frame) {
                 Meta::Link(dest) => write_link(ctx, pos, dest, *size),
                 Meta::Elem(_) => {}
                 Meta::Hide => {}
+                Meta::ContentHint(_) => {}
             },
         }
     }

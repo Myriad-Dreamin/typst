@@ -94,6 +94,8 @@ pub enum Meta {
     /// An identifiable element that produces something within the area this
     /// metadata is attached to.
     Elem(Content),
+    /// Indicates that there is an extra char in the document flow
+    ContentHint(char),
     /// Indicates that content should be hidden. This variant doesn't appear
     /// in the final frames as it is removed alongside the content that should
     /// be hidden.
@@ -105,6 +107,7 @@ impl Debug for Meta {
         match self {
             Self::Link(dest) => write!(f, "Link({dest:?})"),
             Self::Elem(content) => write!(f, "Elem({:?})", content.func()),
+            Self::ContentHint(ch) => write!(f, "Content({ch})"),
             Self::Hide => f.pad("Hide"),
         }
     }
