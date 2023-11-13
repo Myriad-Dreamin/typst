@@ -5,10 +5,10 @@ use unicode_math_class::MathClass;
 use crate::diag::{bail, SourceResult};
 use crate::engine::Engine;
 use crate::foundations::{
-    elem, Content, NativeElement, Packed, Resolve, ShowSet, Smart, StyleChain, Styles,
-    Synthesize,
+    elem, Content, NativeElement, Packed, Resolve, Show, ShowSet, Smart, StyleChain,
+    Styles, Synthesize,
 };
-use crate::introspection::{Count, Counter, CounterUpdate, Locatable};
+use crate::introspection::{Count, Counter, CounterUpdate, Locatable, Meta, MetaElem};
 use crate::layout::{
     Abs, AlignElem, Alignment, Axes, Em, FixedAlignment, Frame, LayoutMultiple,
     LayoutSingle, OuterHAlignment, Point, Regions, Size, SpecificAlignment, VAlignment,
@@ -24,7 +24,7 @@ use crate::text::{
 };
 use crate::util::{option_eq, NonZeroExt, Numeric};
 use crate::World;
-
+use smallvec::smallvec;
 /// A mathematical equation.
 ///
 /// Can be displayed inline with text or as a separate block.
@@ -167,6 +167,15 @@ impl Synthesize for Packed<EquationElem> {
 
         self.push_supplement(Smart::Custom(Some(Supplement::Content(supplement))));
         Ok(())
+    }
+}
+
+impl Show for Packed<EquationElem> {
+    fn show(&self, _engine: &mut Engine, _styles: StyleChain) -> SourceResult<Content> {
+        Ok(self.clone().pack()
+            + MetaElem::new()
+                .pack()
+                .styled(MetaElem::set_data(smallvec![Meta::ContentHint('\n')])))
     }
 }
 
