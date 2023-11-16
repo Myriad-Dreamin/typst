@@ -324,7 +324,10 @@ impl Synthesize for RawElem {
                             i + 1,
                             text.split(is_newline).count() as i64,
                             EcoString::from(&text[range]),
-                            Content::sequence(line.drain(..)),
+                            Content::sequence(line.drain(..))
+                                + MetaElem::new().pack().styled(MetaElem::set_data(
+                                    vec![Meta::ContentHint('\n')],
+                                )),
                         )
                         .pack(),
                     );
@@ -356,7 +359,10 @@ impl Synthesize for RawElem {
                         i as i64 + 1,
                         len as i64,
                         EcoString::from(line),
-                        Content::sequence(line_content),
+                        Content::sequence(line_content)
+                            + MetaElem::new().pack().styled(MetaElem::set_data(vec![
+                                Meta::ContentHint('\n'),
+                            ])),
                     )
                     .pack(),
                 );

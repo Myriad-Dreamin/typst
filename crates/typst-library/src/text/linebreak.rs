@@ -115,8 +115,6 @@ pub(crate) fn breakpoints<'a>(
         // at offset 0, but we don't want it.
         let Some(c) = text[..point].chars().next_back() else { continue };
 
-        println!("breakpoints: {} {:?}: {:?}", point, c, lb.get(c));
-
         // Find out whether the last break was mandatory by checking against
         // rules LB4 and LB5, special-casing the end of text according to LB3.
         // See also: https://docs.rs/icu_segmenter/latest/icu_segmenter/struct.LineSegmenter.html
