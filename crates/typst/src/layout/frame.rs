@@ -5,6 +5,7 @@ use std::num::NonZeroUsize;
 use std::sync::Arc;
 
 use ecow::{eco_format, EcoString};
+use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator};
 
 use crate::foundations::{cast, dict, Dict, Repr, StyleChain, Value};
 use crate::introspection::{Meta, MetaElem};
@@ -136,6 +137,14 @@ impl Frame {
     /// relative to the top-left of the frame.
     pub fn items(&self) -> std::slice::Iter<'_, (Point, FrameItem)> {
         self.items.iter()
+    }
+
+    /// An parallel iterator over the items inside this frame alongside their
+    /// positions relative to the top-left of the frame.
+    pub fn par_items(
+        &self,
+    ) -> impl IndexedParallelIterator<Item = &'_ (Point, FrameItem)> {
+        self.items.par_iter()
     }
 }
 
