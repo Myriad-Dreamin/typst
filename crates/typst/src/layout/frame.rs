@@ -4,6 +4,8 @@ use std::fmt::{self, Debug, Formatter};
 use std::num::NonZeroUsize;
 use std::sync::Arc;
 
+use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator};
+
 use crate::foundations::{cast, dict, Dict, StyleChain, Value};
 use crate::introspection::{Meta, MetaElem};
 use crate::layout::{
@@ -134,6 +136,13 @@ impl Frame {
     /// relative to the top-left of the frame.
     pub fn items(&self) -> std::slice::Iter<'_, (Point, FrameItem)> {
         self.items.iter()
+    }
+
+    /// Provides same content as [`Self::items`] but yields items in parallel.
+    pub fn par_items(
+        &self,
+    ) -> impl IndexedParallelIterator<Item = &'_ (Point, FrameItem)> {
+        self.items.par_iter()
     }
 }
 
