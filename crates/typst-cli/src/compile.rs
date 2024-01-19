@@ -100,6 +100,7 @@ pub fn compile_once(
     match result {
         // Export the PDF / PNG.
         Ok(document) => {
+            println!("doc {document:?}");
             export(world, &document, command, watching)?;
             let duration = start.elapsed();
 

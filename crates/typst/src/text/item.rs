@@ -1,4 +1,4 @@
-use std::fmt::{self, Debug, Formatter};
+use std::fmt::{self, Debug, Formatter, Write};
 use std::ops::Range;
 
 use ecow::EcoString;
@@ -35,6 +35,12 @@ impl TextItem {
 impl Debug for TextItem {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         f.write_str("Text(")?;
+        self.glyphs[0].fmt(f)?;
+        if self.glyphs.len() > 1 {
+            f.write_char(',')?;
+            self.glyphs[1].fmt(f)?;
+        }
+        f.write_char(',')?;
         self.text.fmt(f)?;
         f.write_str(")")
     }
