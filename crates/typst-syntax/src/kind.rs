@@ -28,6 +28,12 @@ pub enum SyntaxKind {
     Emph,
     /// Raw text with optional syntax highlighting: `` `...` ``.
     Raw,
+    /// A single or 3+ backticks: `` ` ``.
+    RawDelim,
+    /// Ingored whitespace in a raw block: `    `.
+    RawTrimmed,
+    /// A line in a multiline raw block: `    let x = 1;`.
+    RawLine,
     /// A hyperlink: `https://typst.org`.
     Link,
     /// A label: `<intro>`.
@@ -364,6 +370,9 @@ impl SyntaxKind {
             Self::Strong => "strong content",
             Self::Emph => "emphasized content",
             Self::Raw => "raw block",
+            Self::RawTrimmed => "raw trimmed",
+            Self::RawDelim => "raw delimiter",
+            Self::RawLine => "raw line",
             Self::Link => "link",
             Self::Label => "label",
             Self::Ref => "reference",

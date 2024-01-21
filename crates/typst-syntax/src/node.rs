@@ -972,6 +972,28 @@ mod tests {
     }
 
     #[test]
+    fn test_xxxx() {
+        let source = Source::detached(
+            r#"
+```
+test
+```"#,
+        );
+        let source = Source::detached(
+            r#"
+ ```js
+ test
+ ```1"#,
+        );
+        let source = Source::detached(
+            r#"
+ ```
+ test
+ ```"#,
+        );
+    }
+
+    #[test]
     fn test_linked_node_non_trivia_leaf() {
         let source = Source::detached("#set fun(12pt, red)");
         let leaf = LinkedNode::new(source.root()).leaf_at(6).unwrap();

@@ -3,8 +3,11 @@ use std::ops::Range;
 
 use ecow::{eco_format, EcoString};
 use unicode_math_class::MathClass;
+use unscanny::Scanner;
 
-use crate::{ast, is_newline, LexMode, Lexer, SyntaxKind, SyntaxNode};
+use crate::{
+    ast, is_id_continue, is_id_start, is_newline, LexMode, Lexer, SyntaxKind, SyntaxNode,
+};
 
 /// Parse a source file.
 #[tracing::instrument(skip_all)]
@@ -113,10 +116,10 @@ fn markup_expr(p: &mut Parser, at_start: &mut bool) {
         | SyntaxKind::Escape
         | SyntaxKind::Shorthand
         | SyntaxKind::SmartQuote
-        | SyntaxKind::Raw
         | SyntaxKind::Link
         | SyntaxKind::Label => p.eat(),
 
+        SyntaxKind::RawDelim => raw(p),
         SyntaxKind::Hash => embedded_code_expr(p),
         SyntaxKind::Star => strong(p),
         SyntaxKind::Underscore => emph(p),
@@ -139,6 +142,181 @@ fn markup_expr(p: &mut Parser, at_start: &mut bool) {
     }
 
     *at_start = false;
+}
+
+fn raw(p: &mut Parser) {
+    let m = p.marker();
+    if !raw_inner(p) {
+        let error = SyntaxNode::error("unclosed raw element", "");
+        p.nodes.insert(m.0, error);
+    } else {
+        p.expect(SyntaxKind::RawDelim);
+    }
+    p.wrap(m, SyntaxKind::Raw);
+}
+
+fn raw_inner(p: &mut Parser) -> bool {
+    let backticks_str = p.current_text();
+    p.save();
+    let backticks = backticks_str.len();
+    let blocky = backticks >= 3;
+    let mut s = Scanner::new(p.text);
+
+    // Eats language identifier
+    let mut raw_start = p.current_end();
+    s.jump(raw_start);
+    if blocky {
+        if s.eat_if(is_id_start) {
+            s.eat_while(is_id_continue);
+            p.nodes.push(SyntaxNode::leaf(SyntaxKind::Text, s.from(raw_start)));
+            raw_start = s.cursor();
+        }
+        if s.eat_if(' ') {
+            p.nodes.push(SyntaxNode::leaf(SyntaxKind::Space, s.from(raw_start)));
+            raw_start = s.cursor();
+        }
+    }
+
+    // The first pass determins following things:
+    // - Whether the raw element is correctly closed or not by `accumulated_backticks`.
+    // - Whether It is multiline or not by `at_first_line`.
+    // - The dedent level by `dedent`.
+    let mut dedent = usize::MAX;
+    let mut accumulated_backticks = 0;
+    let mut at_first_line = true;
+    let mut accumulated_indent = 0;
+    let mut last_indent = None;
+    while accumulated_backticks < backticks {
+        match s.eat() {
+            None => break,
+            Some('`') => accumulated_backticks += 1,
+            Some(c) => {
+                accumulated_backticks = 0;
+
+                if is_newline(c) {
+                    if c == '\r' {
+                        s.eat_if('\n');
+                    }
+
+                    if blocky {
+                        // If all the characters in the line are whitespace,
+                        // then the last_indent is not assigned.
+                        let all_whitespace = last_indent.is_some();
+
+                        if !at_first_line && !all_whitespace {
+                            dedent = dedent.min(last_indent.unwrap());
+                        }
+
+                        accumulated_indent = 0;
+                        last_indent = None;
+                    }
+
+                    at_first_line = false;
+                } else if last_indent.is_none() && blocky {
+                    if char::is_whitespace(c) {
+                        accumulated_indent += 1;
+                    } else {
+                        last_indent = Some(accumulated_indent);
+                    }
+                }
+            }
+        }
+    }
+
+    // Ends scanning procedure
+    // recover parser from regular state
+    p.lexer.jump(s.cursor() - accumulated_backticks);
+    p.lex();
+
+    if accumulated_backticks != backticks {
+        return false;
+    }
+
+    // The second pass
+    s = Scanner::new(s.get(0..s.cursor() - backticks));
+    if blocky && s.from(raw_start).trim_end().ends_with('`') {
+        let text = s.string();
+        // todo: loss space
+        s = Scanner::new(text.strip_suffix(' ').unwrap_or(text));
+    }
+    s.jump(raw_start);
+
+    // Case of single line
+    if at_first_line {
+        // todo
+        p.nodes.push(SyntaxNode::leaf(SyntaxKind::RawLine, s.after()));
+        return true;
+    }
+
+    let last_indent = last_indent.unwrap_or(accumulated_indent);
+    let dedent = dedent.min(last_indent);
+    let mut insert_node = |sk: SyntaxKind, x: &str| {
+        p.nodes.push(SyntaxNode::leaf(sk, x));
+    };
+
+    // First line
+    // todo: should we dedent the first line?
+    let first_line_str = s.eat_until(is_newline);
+    if !first_line_str.chars().all(char::is_whitespace) {
+        insert_node(SyntaxKind::RawLine, first_line_str);
+    }
+    let mut from = s.cursor();
+    if let Some(c) = s.eat() {
+        if c == '\r' {
+            s.eat_if('\n');
+        }
+    }
+
+    if s.done() {
+        insert_node(SyntaxKind::RawTrimmed, s.from(from));
+        return true;
+    }
+
+    let mut to_dedent = dedent;
+    if to_dedent == 0 {
+        insert_node(SyntaxKind::RawTrimmed, s.from(from));
+        from = s.cursor();
+    }
+    while let Some(c) = s.peek() {
+        if is_newline(c) {
+            if to_dedent > 0 {
+                insert_node(SyntaxKind::RawTrimmed, s.from(from));
+                insert_node(SyntaxKind::RawLine, "");
+            } else {
+                insert_node(SyntaxKind::RawLine, s.from(from));
+            }
+            from = s.cursor();
+
+            s.eat();
+            if c == '\r' {
+                s.eat_if('\n');
+            }
+            to_dedent = dedent;
+            if to_dedent == 0 {
+                insert_node(SyntaxKind::RawTrimmed, s.from(from));
+                from = s.cursor();
+            }
+            continue;
+        }
+
+        s.eat();
+        if to_dedent > 0 {
+            assert!(c.is_whitespace(), "invalid dedent");
+            to_dedent -= 1;
+            if to_dedent == 0 {
+                insert_node(SyntaxKind::RawTrimmed, s.from(from));
+                from = s.cursor();
+            }
+        }
+    }
+
+    // Last line
+    let last_line_str = s.from(from);
+    if !last_line_str.chars().all(char::is_whitespace) {
+        insert_node(SyntaxKind::RawLine, last_line_str);
+    }
+
+    true
 }
 
 fn strong(p: &mut Parser) {
@@ -1583,6 +1761,7 @@ impl<'s> Parser<'s> {
         let to = to.0.min(len);
         let from = from.0.min(to);
         let children = self.nodes.drain(from..to).collect();
+        println!("wrap_within: {from:?} {to:?} {children:?}");
         self.nodes.insert(from, SyntaxNode::inner(kind, children));
     }
 

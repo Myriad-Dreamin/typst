@@ -228,29 +228,8 @@ impl Lexer<'_> {
     }
 
     fn raw(&mut self) -> SyntaxKind {
-        let mut backticks = 1;
-        while self.s.eat_if('`') {
-            backticks += 1;
-        }
-
-        if backticks == 2 {
-            return SyntaxKind::Raw;
-        }
-
-        let mut found = 0;
-        while found < backticks {
-            match self.s.eat() {
-                Some('`') => found += 1,
-                Some(_) => found = 0,
-                None => break,
-            }
-        }
-
-        if found != backticks {
-            return self.error("unclosed raw text");
-        }
-
-        SyntaxKind::Raw
+        while self.s.eat_if('`') {}
+        SyntaxKind::RawDelim
     }
 
     fn link(&mut self) -> SyntaxKind {
