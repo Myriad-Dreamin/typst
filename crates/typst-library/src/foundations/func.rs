@@ -146,7 +146,7 @@ pub struct Func {
 
 /// The different kinds of function representations.
 #[derive(Clone, PartialEq, Hash)]
-enum FuncInner {
+pub enum FuncInner {
     /// A native Rust function.
     Native(Static<NativeFuncData>),
     /// A function for an element.
@@ -374,6 +374,11 @@ impl Func {
             self.span = span;
         }
         self
+    }
+
+    /// The function's inner.
+    pub fn inner(&self) -> &FuncInner {
+        &self.inner
     }
 }
 
