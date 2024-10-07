@@ -390,7 +390,7 @@ const PATCHED_IMAGE_RULE: ShowFn<ImageElem> = |elem, engine, styles| {
     let label = Label::new(PicoStr::intern("metadata-asset")).unwrap();
     let meta = MetadataElem::new(array![path.clone(), web_image.data].into_value())
         .pack()
-        .labelled(label);
+        .labelled(label, elem.span());
 
     let mut attrs = HtmlAttrs::new();
     attrs.push(attr::src, path);
