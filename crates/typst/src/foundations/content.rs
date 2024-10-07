@@ -84,6 +84,8 @@ pub struct Content {
 struct Inner<T: ?Sized + 'static> {
     /// An optional label attached to the element.
     label: Option<Label>,
+    /// The span where the label is attached.
+    labelled_at: Span,
     /// The element's location which identifies it in the layouted output.
     location: Option<Location>,
     /// Manages the element during realization.
@@ -103,6 +105,7 @@ impl Content {
                 label: None,
                 location: None,
                 lifecycle: BitSet::new(),
+                labelled_at: Span::detached(),
                 elem: elem.into(),
             }),
             span: Span::detached(),
@@ -137,9 +140,16 @@ impl Content {
         self.inner.label
     }
 
+    /// Get the span where the label is attached.
+    pub fn labelled_at(&self) -> Span {
+        self.inner.labelled_at
+    }
+
     /// Set the label of the content.
-    pub fn labelled(mut self, label: Label) -> Self {
-        self.make_mut().label = Some(label);
+    pub fn labelled(mut self, label: Label, labelled_at: Span) -> Self {
+        let m = self.make_mut();
+        m.label = Some(label);
+        m.labelled_at = labelled_at;
         self
     }
 
@@ -711,6 +721,7 @@ impl<T: NativeElement> Bounds for T {
                 label: inner.label,
                 location: inner.location,
                 lifecycle: inner.lifecycle.clone(),
+                labelled_at: inner.labelled_at,
                 elem: LazyHash::with_hash(self.clone(), inner.elem.hash()),
             }),
             span,

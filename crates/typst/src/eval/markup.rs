@@ -52,7 +52,7 @@ fn eval_markup<'a>(
                     if let Some(elem) =
                         seq.iter_mut().rev().find(|node| !node.can::<dyn Unlabellable>())
                     {
-                        *elem = std::mem::take(elem).labelled(label);
+                        *elem = std::mem::take(elem).labelled(label, expr.span());
                     }
                 }
                 value => seq.push(value.display().spanned(expr.span())),
