@@ -118,9 +118,16 @@ impl Content {
     }
 
     /// Attach a label to the content.
-    pub fn labelled(mut self, label: Label) -> Self {
-        self.set_label(label);
+    pub fn labelled(mut self, label: Label, labelled_at: Span) -> Self {
+        let m = self.0.meta_mut();
+        m.label = Some(label);
+        m.labelled_at = labelled_at;
         self
+    }
+
+    /// Get the span where the label is attached.
+    pub fn labelled_at(&self) -> Span {
+        self.0.meta().labelled_at
     }
 
     /// Set the label of the content.
@@ -509,10 +516,10 @@ impl Content {
 
 #[scope]
 impl Content {
-    /// The content's element function. This function can be used to create the element
-    /// contained in this content. It can be used in set and show rules for the
-    /// element. Can be compared with global functions to check whether you have
-    /// a specific
+    /// The content's element function. This function can be used to create the
+    /// element contained in this content. It can be used in set and show
+    /// rules for the element. Can be compared with global functions to
+    /// check whether you have a specific
     /// kind of element.
     #[func]
     pub fn func(&self) -> Element {

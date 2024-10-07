@@ -78,6 +78,8 @@ struct Header {
 pub(super) struct Meta {
     /// An optional label attached to the element.
     pub label: Option<Label>,
+    /// The span where the label is attached.
+    pub labelled_at: Span,
     /// The element's location which identifies it in the laid-out output.
     pub location: Option<Location>,
     /// Manages the element during realization.
@@ -95,6 +97,7 @@ impl RawContent {
             data,
             Meta {
                 label: None,
+                labelled_at: Span::detached(),
                 location: None,
                 lifecycle: SmallBitSet::new(),
             },
@@ -178,8 +181,7 @@ impl RawContent {
 
         // Safety:
         // - The caller guarantees that the content is of type `E`.
-        // - `self.ptr` is a valid pointer to an `Inner<E>` (see
-        //   `RawContent::ptr`).
+        // - `self.ptr` is a valid pointer to an `Inner<E>` (see `RawContent::ptr`).
         unsafe { &self.ptr.cast::<Inner<E>>().as_ref().data }
     }
 
@@ -200,8 +202,7 @@ impl RawContent {
 
         // Safety:
         // - The caller guarantees that the content is of type `E`.
-        // - `self.ptr` is a valid pointer to an `Inner<E>` (see
-        //   `RawContent::ptr`).
+        // - `self.ptr` is a valid pointer to an `Inner<E>` (see `RawContent::ptr`).
         // - We have unique access to the backing allocation (due to header_mut).
         unsafe { &mut self.ptr.cast::<Inner<E>>().as_mut().data }
     }
