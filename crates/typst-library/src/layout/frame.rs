@@ -24,6 +24,8 @@ pub struct Frame {
     baseline: Option<Abs>,
     /// The items composing this layout.
     items: Arc<LazyHash<Vec<(Point, FrameItem)>>>,
+    /// The eaten character for content hints.
+    content_hint: char,
     /// The hardness of this frame.
     ///
     /// Determines whether it is a boundary for gradient drawing.
@@ -42,6 +44,7 @@ impl Frame {
             size,
             baseline: None,
             items: Arc::new(LazyHash::new(vec![])),
+            content_hint: '\0',
             kind,
         }
     }
@@ -60,6 +63,16 @@ impl Frame {
     #[track_caller]
     pub fn hard(size: Size) -> Self {
         Self::new(size, FrameKind::Hard)
+    }
+
+    /// Sets the frame's content hint.
+    pub fn set_content_hint(&mut self, hint: char) {
+        self.content_hint = hint;
+    }
+
+    /// The content hint (if is not '\0').
+    pub fn content_hint(&self) -> char {
+        self.content_hint
     }
 
     /// Sets the frame's hardness.
@@ -214,8 +227,9 @@ impl Frame {
 
     /// Whether the given frame should be inlined.
     fn should_inline(&self, frame: &Frame) -> bool {
+        let c = frame.content_hint == '\0';
         // We do not inline big frames and hard frames.
-        frame.kind().is_soft() && (self.items.is_empty() || frame.items.len() <= 5)
+        c && frame.kind().is_soft() && (self.items.is_empty() || frame.items.len() <= 5)
     }
 
     /// Inline a frame at the given layer.
