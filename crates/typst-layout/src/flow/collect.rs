@@ -125,6 +125,14 @@ impl<'a> Collector<'a, '_, '_> {
         )?
         .into_frames();
 
+        let mut lines = lines;
+        if let Some(line) = lines.last_mut() {
+            if line.content_hint() == '\0' {
+                line.set_content_hint('\n');
+            }
+        }
+        let lines = lines;
+
         self.output.push(Child::Rel(spacing.into(), 4));
 
         // Determine whether to prevent widow and orphans.
@@ -377,8 +385,13 @@ fn layout_single_impl(
         route: Route::extend(route),
     };
 
-    layout_single_block(elem, &mut engine, locator, styles, region)
-        .map(|frame| frame.post_processed(styles))
+    layout_single_block(elem, &mut engine, locator, styles, region).map(|frame| {
+        let mut frame = frame.post_processed(styles);
+        if !frame.is_empty() {
+            frame.set_content_hint('\n');
+        }
+        frame
+    })
 }
 
 /// A child that encapsulates a prepared breakable block.
