@@ -168,6 +168,13 @@ impl<'a> Collector<'a, '_, '_> {
             self.par_situation,
         )?
         .into_frames();
+        let mut lines = lines;
+        if let Some(line) = lines.last_mut() {
+            if line.content_hint() == '\0' {
+                line.set_content_hint('\n');
+            }
+        }
+        let lines = lines;
 
         let spacing = elem.spacing(styles);
         let leading = elem.leading(styles);
@@ -434,6 +441,12 @@ fn layout_single_impl(
 
     layout_and_modify(styles, |styles| {
         layout_single_block(elem, &mut engine, locator, styles, region)
+    })
+    .map(|mut frame| {
+        if !frame.is_empty() {
+            frame.set_content_hint('\n');
+        }
+        frame
     })
 }
 

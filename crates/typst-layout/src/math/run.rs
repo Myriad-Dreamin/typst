@@ -219,6 +219,8 @@ impl MathRun {
             }
             size.x.set_max(sub.width());
             size.y += sub.height();
+            let mut sub = sub;
+            sub.set_content_hint('\n');
             frames.push((sub, pos));
         }
 
