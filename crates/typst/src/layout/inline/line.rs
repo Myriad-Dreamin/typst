@@ -32,6 +32,8 @@ pub struct Line<'a> {
     pub width: Abs,
     /// Whether the line should be justified.
     pub justify: bool,
+    /// The eaten character by breakpoints.
+    pub eaten: char,
     /// Whether the line ends with a hyphen or dash, either naturally or through
     /// hyphenation.
     pub dash: Option<Dash>,
@@ -44,6 +46,7 @@ impl<'a> Line<'a> {
             items: Items::new(),
             width: Abs::zero(),
             justify: false,
+            eaten: '\0',
             dash: None,
         }
     }
@@ -127,6 +130,7 @@ pub fn line<'a>(
     range: Range,
     breakpoint: Breakpoint,
     pred: Option<&Line>,
+    eaten: char,
 ) -> Line<'a> {
     // The line's full text.
     let full = &p.text[range.clone()];
@@ -172,7 +176,7 @@ pub fn line<'a>(
     // Compute the line's width.
     let width = items.iter().map(Item::natural_width).sum();
 
-    Line { items, width, justify, dash }
+    Line { items, eaten, width, justify, dash }
 }
 
 /// Collects / reshapes all items for the line with the given `range`.
@@ -558,6 +562,7 @@ pub fn commit(
         output.push_frame(Point::new(x, y), frame);
     }
 
+    output.set_content_hint(line.eaten);
     Ok(output)
 }
 

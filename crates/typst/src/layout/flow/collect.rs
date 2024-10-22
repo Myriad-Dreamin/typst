@@ -370,8 +370,13 @@ fn layout_single_impl(
         route: Route::extend(route),
     };
 
-    elem.layout_single(&mut engine, locator, styles, region)
-        .map(|frame| frame.post_processed(styles))
+    elem.layout_single(&mut engine, locator, styles, region).map(|frame| {
+        let mut frame = frame.post_processed(styles);
+        if !frame.is_empty() {
+            frame.set_content_hint('\n');
+        }
+        frame
+    })
 }
 
 /// A child that encapsulates a prepared breakable block.
