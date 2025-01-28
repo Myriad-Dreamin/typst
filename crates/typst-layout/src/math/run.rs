@@ -140,6 +140,8 @@ pub fn stack_rows(
         }
         size.x.set_max(sub.width());
         size.y += row_ascent + row_descent;
+        let mut sub = sub;
+        sub.set_content_hint('\n');
         frames.push((sub, pos));
     }
 

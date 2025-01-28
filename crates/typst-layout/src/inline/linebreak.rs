@@ -173,9 +173,9 @@ fn linebreak_simple<'a>(
     let mut start = 0;
     let mut last = None;
 
-    breakpoints(p, |end, breakpoint| {
+    breakpoints(p, |end, breakpoint, eaten| {
         // Compute the line and its size.
-        let mut attempt = line(engine, p, start..end, breakpoint, lines.last());
+        let mut attempt = line(engine, p, start..end, breakpoint, lines.last(), eaten);
 
         // If the line doesn't fit anymore, we push the last fitting attempt
         // into the stack and rebuild the line from the attempt's end. The
@@ -185,7 +185,7 @@ fn linebreak_simple<'a>(
         {
             lines.push(last_attempt);
             start = last_end;
-            attempt = line(engine, p, start..end, breakpoint, lines.last());
+            attempt = line(engine, p, start..end, breakpoint, lines.last(), eaten);
         }
 
         // Finish the current line if there is a mandatory line break (i.e. due
@@ -264,7 +264,7 @@ fn linebreak_optimized_bounded<'a>(
     let mut active = 0;
     let mut prev_end = 0;
 
-    breakpoints(p, |end, breakpoint| {
+    breakpoints(p, |end, breakpoint, eaten| {
         // Find the optimal predecessor.
         let mut best: Option<Entry> = None;
 
@@ -284,7 +284,8 @@ fn linebreak_optimized_bounded<'a>(
             }
 
             // Build the line.
-            let attempt = line(engine, p, start..end, breakpoint, Some(&pred.line));
+            let attempt =
+                line(engine, p, start..end, breakpoint, Some(&pred.line), eaten);
 
             // Determine the cost of the line and its stretch ratio.
             let (line_ratio, line_cost) = ratio_and_cost(
@@ -397,6 +398,7 @@ fn linebreak_optimized_approximate(
         end: usize,
         unbreakable: bool,
         breakpoint: Breakpoint,
+        eaten: char,
     }
 
     // Dynamic programming table.
@@ -405,13 +407,14 @@ fn linebreak_optimized_approximate(
         total: 0.0,
         end: 0,
         unbreakable: false,
+        eaten: '\0',
         breakpoint: Breakpoint::Mandatory,
     }];
 
     let mut active = 0;
     let mut prev_end = 0;
 
-    breakpoints(p, |end, breakpoint| {
+    breakpoints(p, |end, breakpoint, eaten| {
         // Find the optimal predecessor.
         let mut best: Option<Entry> = None;
         for (pred_index, pred) in table.iter().enumerate().skip(active) {
@@ -474,6 +477,7 @@ fn linebreak_optimized_approximate(
                     end,
                     unbreakable,
                     breakpoint,
+                    eaten,
                 });
             }
         }
@@ -505,9 +509,9 @@ fn linebreak_optimized_approximate(
     // computes its exact cost as that gives us a sound upper bound for the
     // proper optimization pass.
     for idx in indices.into_iter().rev() {
-        let Entry { end, breakpoint, unbreakable, .. } = table[idx];
+        let Entry { end, breakpoint, unbreakable, eaten, .. } = table[idx];
 
-        let attempt = line(engine, p, start..end, breakpoint, Some(&pred));
+        let attempt = line(engine, p, start..end, breakpoint, Some(&pred), eaten);
         let (ratio, line_cost) =
             ratio_and_cost(p, metrics, width, &pred, &attempt, breakpoint, unbreakable);
 
@@ -690,12 +694,12 @@ fn raw_cost(
 /// This is an internal instead of an external iterator because it makes the
 /// code much simpler and the consumers of this function don't need the
 /// composability and flexibility of external iteration anyway.
-fn breakpoints(p: &Preparation, mut f: impl FnMut(usize, Breakpoint)) {
+fn breakpoints(p: &Preparation, mut f: impl FnMut(usize, Breakpoint, char)) {
     let text = p.text;
 
     // Single breakpoint at the end for empty text.
     if text.is_empty() {
-        f(0, Breakpoint::Mandatory);
+        f(0, Breakpoint::Mandatory, '\0');
         return;
     }
 
@@ -713,7 +717,7 @@ fn breakpoints(p: &Preparation, mut f: impl FnMut(usize, Breakpoint)) {
         let (head, tail) = text.split_at(last);
         if head.ends_with("://") || tail.starts_with("www.") {
             let (link, _) = link_prefix(tail);
-            linebreak_link(link, |i| f(last + i, Breakpoint::Normal));
+            linebreak_link(link, |i| f(last + i, Breakpoint::Normal, '\0'));
             last += link.len();
             while iter.peek().is_some_and(|&p| p < last) {
                 iter.next();
@@ -727,6 +731,8 @@ fn breakpoints(p: &Preparation, mut f: impl FnMut(usize, Breakpoint)) {
         // at offset 0, but we don't want it.
         let Some(c) = text[..point].chars().next_back() else { continue };
 
+        let mut eaten = '\0';
+
         // Find out whether the last break was mandatory by checking against
         // rules LB4 and LB5, special-casing the end of text according to LB3.
         // See also: https://docs.rs/icu_segmenter/latest/icu_segmenter/struct.LineSegmenter.html
@@ -738,7 +744,14 @@ fn breakpoints(p: &Preparation, mut f: impl FnMut(usize, Breakpoint)) {
                 LineBreak::MandatoryBreak
                 | LineBreak::CarriageReturn
                 | LineBreak::LineFeed
-                | LineBreak::NextLine => Breakpoint::Mandatory,
+                | LineBreak::NextLine => {
+                    eaten = c;
+                    Breakpoint::Mandatory
+                }
+                LineBreak::Space => {
+                    eaten = c;
+                    Breakpoint::Normal
+                }
 
                 // https://github.com/typst/typst/issues/5489
                 //
@@ -776,7 +789,7 @@ fn breakpoints(p: &Preparation, mut f: impl FnMut(usize, Breakpoint)) {
         }
 
         // Call `f` for the UAX #14 break opportunity.
-        f(point, breakpoint);
+        f(point, breakpoint, eaten);
         last = point;
     }
 }
@@ -786,7 +799,7 @@ fn hyphenations(
     p: &Preparation,
     mut offset: usize,
     word: &str,
-    mut f: impl FnMut(usize, Breakpoint),
+    mut f: impl FnMut(usize, Breakpoint, char),
 ) {
     let Some(lang) = lang_at(p, offset) else { return };
     let count = word.chars().count();
@@ -821,7 +834,7 @@ fn hyphenations(
         let r = (count - chars).saturating_as::<u8>();
 
         // Call `f` for the word-internal hyphenation opportunity.
-        f(offset, Breakpoint::Hyphen(l, r));
+        f(offset, Breakpoint::Hyphen(l, r), '\0');
     }
 }
 
