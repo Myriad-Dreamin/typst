@@ -110,16 +110,23 @@ impl Show for Packed<LinkElem> {
 
         Ok(if TargetElem::target_in(styles).is_html() {
             let href = match &self.dest {
-                LinkTarget::Dest(Destination::Url(url)) => Some(url.clone().into_inner()),
+                LinkTarget::Dest(Destination::Url(url)) => {
+                    Some((url.clone().into_inner(), None))
+                }
                 LinkTarget::Label(label) => {
-                    Some(eco_format!("javascript:var sel = document.querySelector('[data-typst-label={:?}]');sel&&sel.scrollIntoView()", label.resolve().as_str()))
+                    let label = label.resolve();
+                    let hash = eco_format!("#label-{label}");
+                    let onclick = eco_format!("var sel = document.querySelector('[data-typst-label={:?}]');sel&&(window.scroll({{top: sel.getBoundingClientRect().top + window.scrollY - window.innerHeight * 0.382}})); window.location.hash = {hash:?}; return false;", label.as_str());
+                    Some((EcoString::inline("#"), Some(onclick)))
                 }
                 _ => None,
             };
-            if let Some(href) = href {
-                HtmlElem::new(tag::a)
-                    .with_label_attr(self.label())
-                    .with_attr(attr::href, href)
+            if let Some((href, onclick)) = href {
+                let mut elem = HtmlElem::new(tag::a).with_label_attr(self.label());
+                if let Some(onclick) = onclick {
+                    elem = elem.with_attr(attr::onclick, onclick)
+                }
+                elem.with_attr(attr::href, href)
                     .with_body(Some(body))
                     .pack()
                     .spanned(self.span())

@@ -660,6 +660,7 @@ pub mod attr {
         cite
         colspan
         content
+        onclick
         href
         name
         reversed
