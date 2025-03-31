@@ -111,11 +111,14 @@ impl Show for Packed<LinkElem> {
         Ok(if TargetElem::target_in(styles).is_html() {
             let href = match &self.dest {
                 LinkTarget::Dest(Destination::Url(url)) => Some(url.clone().into_inner()),
-                LinkTarget::Label(label) => Some(eco_format!("javascript:document.querySelector('[data-typst-label={label:?}]').scrollIntoView()")),
+                LinkTarget::Label(label) => {
+                    Some(eco_format!("javascript:var sel = document.querySelector('[data-typst-label={:?}]');sel&&sel.scrollIntoView()", label.resolve().as_str()))
+                }
                 _ => None,
             };
             if let Some(href) = href {
                 HtmlElem::new(tag::a)
+                    .with_label_attr(self.label())
                     .with_attr(attr::href, href)
                     .with_body(Some(body))
                     .pack()
