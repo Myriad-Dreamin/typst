@@ -196,6 +196,7 @@ fn handle(
         output.push(
             HtmlElement::new(tag::p)
                 .with_children(children)
+                .with_label_attr(child.label())
                 .spanned(elem.span())
                 .into(),
         );
@@ -207,6 +208,7 @@ fn handle(
             output.push(
                 HtmlElement::new(tag::span)
                     .with_attr(attr::style, "display: inline-block;")
+                    .with_label_attr(child.label())
                     .with_children(children)
                     .spanned(elem.span())
                     .into(),

@@ -42,6 +42,7 @@ impl Show for Packed<EmphElem> {
         let body = self.body.clone();
         Ok(if TargetElem::target_in(styles).is_html() {
             HtmlElem::new(tag::em)
+                .with_label_attr(self.label())
                 .with_body(Some(body))
                 .pack()
                 .spanned(self.span())

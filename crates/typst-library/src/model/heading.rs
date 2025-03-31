@@ -283,6 +283,7 @@ impl Show for Packed<HeadingElem> {
                     .with_body(Some(realized))
                     .with_attr(attr::role, "heading")
                     .with_attr(attr::aria_level, eco_format!("{}", level + 1))
+                    .with_label_attr(self.label())
                     .pack()
                     .spanned(span)
             } else {

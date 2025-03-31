@@ -355,6 +355,7 @@ impl Show for Packed<FigureElem> {
 
         if target.is_html() {
             return Ok(HtmlElem::new(tag::figure)
+                .with_label_attr(self.label())
                 .with_body(Some(realized))
                 .pack()
                 .spanned(span));
@@ -612,6 +613,7 @@ impl Show for Packed<FigureCaption> {
 
         Ok(if TargetElem::target_in(styles).is_html() {
             HtmlElem::new(tag::figcaption)
+                .with_label_attr(self.label())
                 .with_body(Some(realized))
                 .pack()
                 .spanned(self.span())

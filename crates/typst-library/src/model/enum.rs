@@ -231,7 +231,7 @@ impl Show for Packed<EnumElem> {
         let tight = self.tight(styles);
 
         if TargetElem::target_in(styles).is_html() {
-            let mut elem = HtmlElem::new(tag::ol);
+            let mut elem = HtmlElem::new(tag::ol).with_label_attr(self.label());
             if self.reversed(styles) {
                 elem = elem.with_attr(attr::reversed, "reversed");
             }

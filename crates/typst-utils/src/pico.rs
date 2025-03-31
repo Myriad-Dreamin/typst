@@ -215,6 +215,7 @@ mod exceptions {
     /// A global list of non-bitcode-encodable compile-time internible strings.
     pub const LIST: &[&str] = &[
         "cjk-latin-spacing",
+        "data-typst-label",
         "discretionary-ligatures",
         "h5",
         "h6",

@@ -451,6 +451,7 @@ impl Show for Packed<RawElem> {
             } else {
                 tag::code
             })
+            .with_label_attr(self.label())
             .with_body(Some(realized))
             .pack()
             .spanned(self.span()));

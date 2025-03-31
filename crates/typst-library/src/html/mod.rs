@@ -6,7 +6,7 @@ pub use self::dom::*;
 
 use ecow::EcoString;
 
-use crate::foundations::{elem, Content, Module, Scope};
+use crate::foundations::{elem, Content, Label, Module, Scope};
 
 /// Create a module with all HTML definitions.
 pub fn module() -> Module {
@@ -60,6 +60,18 @@ impl HtmlElem {
     /// Add an attribute to the element.
     pub fn with_attr(mut self, attr: HtmlAttr, value: impl Into<EcoString>) -> Self {
         self.attrs.get_or_insert_with(Default::default).push(attr, value);
+        self
+    }
+
+    /// Add an optional label to the element.
+    pub fn with_label_attr(mut self, label: Option<Label>) -> Self {
+        let Some(label) = label else {
+            return self;
+        };
+
+        self.attrs
+            .get_or_insert_with(Default::default)
+            .push(attr::data_typst_label, label.resolve().as_str());
         self
     }
 }

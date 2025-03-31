@@ -6,7 +6,7 @@ use typst_utils::NonZeroExt;
 use crate::diag::{bail, HintedStrResult, HintedString, SourceResult};
 use crate::engine::Engine;
 use crate::foundations::{
-    cast, elem, scope, Content, NativeElement, Packed, Show, Smart, StyleChain,
+    cast, elem, scope, Content, Label, NativeElement, Packed, Show, Smart, StyleChain,
     TargetElem,
 };
 use crate::html::{attr, tag, HtmlAttrs, HtmlElem, HtmlTag};
@@ -280,7 +280,11 @@ fn show_cell_html(tag: HtmlTag, cell: &Cell, styles: StyleChain) -> Content {
         .spanned(cell.span())
 }
 
-fn show_cellgrid_html(grid: CellGrid, styles: StyleChain) -> Content {
+fn show_cellgrid_html(
+    grid: CellGrid,
+    label: Option<Label>,
+    styles: StyleChain,
+) -> Content {
     let elem = |tag, body| HtmlElem::new(tag).with_body(Some(body)).pack();
     let mut rows: Vec<_> = grid.entries.chunks(grid.non_gutter_column_count()).collect();
 
@@ -307,7 +311,11 @@ fn show_cellgrid_html(grid: CellGrid, styles: StyleChain) -> Content {
     }
 
     let content = header.into_iter().chain(core::iter::once(body)).chain(footer);
-    elem(tag::table, Content::sequence(content))
+
+    HtmlElem::new(tag::table)
+        .with_label_attr(label)
+        .with_body(Some(Content::sequence(content)))
+        .pack()
 }
 
 impl Show for Packed<TableElem> {
@@ -316,7 +324,9 @@ impl Show for Packed<TableElem> {
             // TODO: This is a hack, it is not clear whether the locator is actually used by HTML.
             // How can we find out whether locator is actually used?
             let locator = Locator::root();
-            show_cellgrid_html(table_to_cellgrid(self, engine, locator, styles)?, styles)
+            let grid = table_to_cellgrid(self, engine, locator, styles)?;
+            let label = self.label();
+            show_cellgrid_html(grid, label, styles)
         } else {
             BlockElem::multi_layouter(self.clone(), engine.routines.layout_table).pack()
         }

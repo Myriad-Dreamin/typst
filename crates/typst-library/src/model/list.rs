@@ -145,6 +145,7 @@ impl Show for Packed<ListElem> {
 
         if TargetElem::target_in(styles).is_html() {
             return Ok(HtmlElem::new(tag::ul)
+                .with_label_attr(self.label())
                 .with_body(Some(Content::sequence(self.children.iter().map(|item| {
                     // Text in wide lists shall always turn into paragraphs.
                     let mut body = item.body.clone();

@@ -125,6 +125,7 @@ impl Show for Packed<TermsElem> {
 
         if TargetElem::target_in(styles).is_html() {
             return Ok(HtmlElem::new(tag::dl)
+                .with_label_attr(self.label())
                 .with_body(Some(Content::sequence(self.children.iter().flat_map(
                     |item| {
                         // Text in wide term lists shall always turn into paragraphs.

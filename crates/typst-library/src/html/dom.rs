@@ -5,7 +5,7 @@ use typst_syntax::Span;
 use typst_utils::{PicoStr, ResolvedPicoStr};
 
 use crate::diag::{bail, HintedStrResult, StrResult};
-use crate::foundations::{cast, Dict, Repr, Str};
+use crate::foundations::{cast, Dict, Label, Repr, Str};
 use crate::introspection::{Introspector, Tag};
 use crate::layout::Frame;
 use crate::model::DocumentInfo;
@@ -82,6 +82,16 @@ impl HtmlElement {
     /// Add an atribute to the element.
     pub fn with_attr(mut self, key: HtmlAttr, value: impl Into<EcoString>) -> Self {
         self.attrs.push(key, value);
+        self
+    }
+
+    /// Add an optional label to the element.
+    pub fn with_label_attr(mut self, label: Option<Label>) -> Self {
+        let Some(label) = label else {
+            return self;
+        };
+
+        self.attrs.push(attr::data_typst_label, label.resolve().as_str());
         self
     }
 
@@ -661,4 +671,5 @@ pub mod attr {
     }
 
     pub const aria_level: HtmlAttr = HtmlAttr::constant("aria-level");
+    pub const data_typst_label: HtmlAttr = HtmlAttr::constant("data-typst-label");
 }
