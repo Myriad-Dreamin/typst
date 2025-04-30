@@ -2162,10 +2162,6 @@ function _assertClass(instance, klass) {
     throw new Error(`expected instance of ${klass.name}`);
   }
 }
-function renderer_build_info() {
-  const ret = wasm.renderer_build_info();
-  return takeObject(ret);
-}
 let cachedUint32ArrayMemory0 = null;
 function getUint32ArrayMemory0() {
   if (cachedUint32ArrayMemory0 === null || cachedUint32ArrayMemory0.byteLength === 0) {
@@ -2178,6 +2174,10 @@ function passArray32ToWasm0(arg, malloc) {
   getUint32ArrayMemory0().set(arg, ptr / 4);
   WASM_VECTOR_LEN = arg.length;
   return ptr;
+}
+function renderer_build_info() {
+  const ret = wasm.renderer_build_info();
+  return takeObject(ret);
 }
 function __wbg_adapter_26(arg0, arg1) {
   _assertNum(arg0);
@@ -2930,132 +2930,6 @@ class TypstRenderer {
     }
   }
   /**
-   * @param {RenderSession} ses
-   * @param {HTMLElement} elem
-   * @returns {Promise<IncrDomDocClient>}
-   */
-  mount_dom(ses, elem) {
-    if (this.__wbg_ptr == 0) throw new Error("Attempt to use a moved value");
-    _assertNum(this.__wbg_ptr);
-    _assertClass(ses, RenderSession2);
-    if (ses.__wbg_ptr === 0) {
-      throw new Error("Attempt to use a moved value");
-    }
-    const ret = wasm.typstrenderer_mount_dom(this.__wbg_ptr, ses.__wbg_ptr, addHeapObject(elem));
-    return takeObject(ret);
-  }
-  constructor() {
-    const ret = wasm.typstrenderer_new();
-    this.__wbg_ptr = ret >>> 0;
-    TypstRendererFinalization.register(this, this.__wbg_ptr, this);
-    return this;
-  }
-  /**
-   * @param {CreateSessionOptions | null} [options]
-   * @returns {RenderSession}
-   */
-  create_session(options) {
-    try {
-      if (this.__wbg_ptr == 0) throw new Error("Attempt to use a moved value");
-      const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-      _assertNum(this.__wbg_ptr);
-      let ptr0 = 0;
-      if (!isLikeNone(options)) {
-        _assertClass(options, CreateSessionOptions);
-        if (options.__wbg_ptr === 0) {
-          throw new Error("Attempt to use a moved value");
-        }
-        ptr0 = options.__destroy_into_raw();
-      }
-      wasm.typstrenderer_create_session(retptr, this.__wbg_ptr, ptr0);
-      var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-      var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-      var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-      if (r2) {
-        throw takeObject(r1);
-      }
-      return RenderSession2.__wrap(r0);
-    } finally {
-      wasm.__wbindgen_add_to_stack_pointer(16);
-    }
-  }
-  /**
-   * @param {RenderSession} session
-   */
-  reset(session) {
-    try {
-      if (this.__wbg_ptr == 0) throw new Error("Attempt to use a moved value");
-      const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-      _assertNum(this.__wbg_ptr);
-      _assertClass(session, RenderSession2);
-      if (session.__wbg_ptr === 0) {
-        throw new Error("Attempt to use a moved value");
-      }
-      wasm.typstrenderer_reset(retptr, this.__wbg_ptr, session.__wbg_ptr);
-      var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-      var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-      if (r1) {
-        throw takeObject(r0);
-      }
-    } finally {
-      wasm.__wbindgen_add_to_stack_pointer(16);
-    }
-  }
-  /**
-   * @param {RenderSession} session
-   * @param {string} action
-   * @param {Uint8Array} data
-   */
-  manipulate_data(session, action, data) {
-    try {
-      if (this.__wbg_ptr == 0) throw new Error("Attempt to use a moved value");
-      const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-      _assertNum(this.__wbg_ptr);
-      _assertClass(session, RenderSession2);
-      if (session.__wbg_ptr === 0) {
-        throw new Error("Attempt to use a moved value");
-      }
-      const ptr0 = passStringToWasm0(action, wasm.__wbindgen_export_1, wasm.__wbindgen_export_2);
-      const len0 = WASM_VECTOR_LEN;
-      const ptr1 = passArray8ToWasm0(data, wasm.__wbindgen_export_1);
-      const len1 = WASM_VECTOR_LEN;
-      wasm.typstrenderer_manipulate_data(retptr, this.__wbg_ptr, session.__wbg_ptr, ptr0, len0, ptr1, len1);
-      var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-      var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-      if (r1) {
-        throw takeObject(r0);
-      }
-    } finally {
-      wasm.__wbindgen_add_to_stack_pointer(16);
-    }
-  }
-  /**
-   * @param {Uint8Array} artifact_content
-   * @param {string} decoder
-   * @returns {RenderSession}
-   */
-  session_from_artifact(artifact_content, decoder) {
-    try {
-      if (this.__wbg_ptr == 0) throw new Error("Attempt to use a moved value");
-      const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-      _assertNum(this.__wbg_ptr);
-      const ptr0 = passArray8ToWasm0(artifact_content, wasm.__wbindgen_export_1);
-      const len0 = WASM_VECTOR_LEN;
-      const ptr1 = passStringToWasm0(decoder, wasm.__wbindgen_export_1, wasm.__wbindgen_export_2);
-      const len1 = WASM_VECTOR_LEN;
-      wasm.typstrenderer_session_from_artifact(retptr, this.__wbg_ptr, ptr0, len0, ptr1, len1);
-      var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-      var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-      var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-      if (r2) {
-        throw takeObject(r1);
-      }
-      return RenderSession2.__wrap(r0);
-    } finally {
-      wasm.__wbindgen_add_to_stack_pointer(16);
-    }
-  }
-  /**
    * @param {any} _v
    */
   load_glyph_pack(_v) {
@@ -3184,6 +3058,21 @@ class TypstRenderer {
   }
   /**
    * @param {RenderSession} ses
+   * @param {HTMLElement} elem
+   * @returns {Promise<IncrDomDocClient>}
+   */
+  mount_dom(ses, elem) {
+    if (this.__wbg_ptr == 0) throw new Error("Attempt to use a moved value");
+    _assertNum(this.__wbg_ptr);
+    _assertClass(ses, RenderSession2);
+    if (ses.__wbg_ptr === 0) {
+      throw new Error("Attempt to use a moved value");
+    }
+    const ret = wasm.typstrenderer_mount_dom(this.__wbg_ptr, ses.__wbg_ptr, addHeapObject(elem));
+    return takeObject(ret);
+  }
+  /**
+   * @param {RenderSession} ses
    * @param {any} canvas
    * @param {RenderPageImageOptions | null} [options]
    * @returns {Promise<any>}
@@ -3205,6 +3094,117 @@ class TypstRenderer {
     }
     const ret = wasm.typstrenderer_render_page_to_canvas(this.__wbg_ptr, ses.__wbg_ptr, addHeapObject(canvas), ptr0);
     return takeObject(ret);
+  }
+  constructor() {
+    const ret = wasm.typstrenderer_new();
+    this.__wbg_ptr = ret >>> 0;
+    TypstRendererFinalization.register(this, this.__wbg_ptr, this);
+    return this;
+  }
+  /**
+   * @param {CreateSessionOptions | null} [options]
+   * @returns {RenderSession}
+   */
+  create_session(options) {
+    try {
+      if (this.__wbg_ptr == 0) throw new Error("Attempt to use a moved value");
+      const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+      _assertNum(this.__wbg_ptr);
+      let ptr0 = 0;
+      if (!isLikeNone(options)) {
+        _assertClass(options, CreateSessionOptions);
+        if (options.__wbg_ptr === 0) {
+          throw new Error("Attempt to use a moved value");
+        }
+        ptr0 = options.__destroy_into_raw();
+      }
+      wasm.typstrenderer_create_session(retptr, this.__wbg_ptr, ptr0);
+      var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+      var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+      var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+      if (r2) {
+        throw takeObject(r1);
+      }
+      return RenderSession2.__wrap(r0);
+    } finally {
+      wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+  }
+  /**
+   * @param {RenderSession} session
+   */
+  reset(session) {
+    try {
+      if (this.__wbg_ptr == 0) throw new Error("Attempt to use a moved value");
+      const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+      _assertNum(this.__wbg_ptr);
+      _assertClass(session, RenderSession2);
+      if (session.__wbg_ptr === 0) {
+        throw new Error("Attempt to use a moved value");
+      }
+      wasm.typstrenderer_reset(retptr, this.__wbg_ptr, session.__wbg_ptr);
+      var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+      var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+      if (r1) {
+        throw takeObject(r0);
+      }
+    } finally {
+      wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+  }
+  /**
+   * @param {RenderSession} session
+   * @param {string} action
+   * @param {Uint8Array} data
+   */
+  manipulate_data(session, action, data) {
+    try {
+      if (this.__wbg_ptr == 0) throw new Error("Attempt to use a moved value");
+      const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+      _assertNum(this.__wbg_ptr);
+      _assertClass(session, RenderSession2);
+      if (session.__wbg_ptr === 0) {
+        throw new Error("Attempt to use a moved value");
+      }
+      const ptr0 = passStringToWasm0(action, wasm.__wbindgen_export_1, wasm.__wbindgen_export_2);
+      const len0 = WASM_VECTOR_LEN;
+      const ptr1 = passArray8ToWasm0(data, wasm.__wbindgen_export_1);
+      const len1 = WASM_VECTOR_LEN;
+      wasm.typstrenderer_manipulate_data(retptr, this.__wbg_ptr, session.__wbg_ptr, ptr0, len0, ptr1, len1);
+      var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+      var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+      if (r1) {
+        throw takeObject(r0);
+      }
+    } finally {
+      wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+  }
+  /**
+   * @param {Uint8Array} artifact_content
+   * @param {string} decoder
+   * @returns {RenderSession}
+   */
+  session_from_artifact(artifact_content, decoder) {
+    try {
+      if (this.__wbg_ptr == 0) throw new Error("Attempt to use a moved value");
+      const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+      _assertNum(this.__wbg_ptr);
+      const ptr0 = passArray8ToWasm0(artifact_content, wasm.__wbindgen_export_1);
+      const len0 = WASM_VECTOR_LEN;
+      const ptr1 = passStringToWasm0(decoder, wasm.__wbindgen_export_1, wasm.__wbindgen_export_2);
+      const len1 = WASM_VECTOR_LEN;
+      wasm.typstrenderer_session_from_artifact(retptr, this.__wbg_ptr, ptr0, len0, ptr1, len1);
+      var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+      var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+      var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+      if (r2) {
+        throw takeObject(r1);
+      }
+      return RenderSession2.__wrap(r0);
+    } finally {
+      wasm.__wbindgen_add_to_stack_pointer(16);
+    }
   }
 }
 const TypstRendererBuilderFinalization = typeof FinalizationRegistry === "undefined" ? { register: () => {
@@ -4330,21 +4330,21 @@ function __wbg_get_imports() {
     _assertBoolean(ret);
     return ret;
   };
-  imports.wbg.__wbindgen_closure_wrapper1642 = function() {
+  imports.wbg.__wbindgen_closure_wrapper1625 = function() {
     return logError(function(arg0, arg1, arg2) {
-      const ret = makeClosure(arg0, arg1, 144, __wbg_adapter_26);
+      const ret = makeClosure(arg0, arg1, 134, __wbg_adapter_26);
       return addHeapObject(ret);
     }, arguments);
   };
-  imports.wbg.__wbindgen_closure_wrapper1643 = function() {
+  imports.wbg.__wbindgen_closure_wrapper1626 = function() {
     return logError(function(arg0, arg1, arg2) {
-      const ret = makeClosure(arg0, arg1, 144, __wbg_adapter_29);
+      const ret = makeClosure(arg0, arg1, 134, __wbg_adapter_29);
       return addHeapObject(ret);
     }, arguments);
   };
-  imports.wbg.__wbindgen_closure_wrapper2286 = function() {
+  imports.wbg.__wbindgen_closure_wrapper2253 = function() {
     return logError(function(arg0, arg1, arg2) {
-      const ret = makeMutClosure(arg0, arg1, 144, __wbg_adapter_32);
+      const ret = makeMutClosure(arg0, arg1, 134, __wbg_adapter_32);
       return addHeapObject(ret);
     }, arguments);
   };
@@ -4453,9 +4453,8 @@ function setImportWasmModule(importer) {
 }
 let nodeJsImportWasmModule = async function(wasm_name, url) {
   const escapeImport = new Function("m", "return import(m)");
-  const path = await escapeImport("path");
   const { readFileSync } = await escapeImport("fs");
-  const wasmPath = new URL(path.join(path.dirname(url), wasm_name));
+  const wasmPath = new URL(wasm_name, url);
   return await readFileSync(wasmPath).buffer;
 };
 const isNode = typeof process !== "undefined" && process.versions != null && process.versions.node != null;
