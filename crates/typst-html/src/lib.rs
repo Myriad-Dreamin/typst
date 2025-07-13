@@ -4,7 +4,7 @@ pub mod attr;
 pub mod property;
 pub mod tag;
 
-mod charsets;
+pub mod charsets;
 mod convert;
 mod css;
 mod document;
