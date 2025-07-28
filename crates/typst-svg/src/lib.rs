@@ -8,7 +8,7 @@ mod text;
 mod write;
 
 use comemo::Tracked;
-pub use image::{WebImage, convert_image_scaling};
+pub use image::{WebImage, convert_image_scaling, pdf_to_svg};
 use indexmap::IndexMap;
 use rustc_hash::FxBuildHasher;
 use typst_library::model::{Destination, LateLinkResolver};

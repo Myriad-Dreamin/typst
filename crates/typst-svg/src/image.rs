@@ -143,7 +143,7 @@ impl WebImage {
 }
 
 // Keep this in sync with `typst-png`!
-fn pdf_to_svg(pdf: &PdfImage) -> String {
+pub fn pdf_to_svg(pdf: &PdfImage) -> String {
     let select_standard_font = move |font: StandardFont| -> Option<(FontData, u32)> {
         let bytes = match font {
             StandardFont::Helvetica => typst_assets::pdf::SANS,
