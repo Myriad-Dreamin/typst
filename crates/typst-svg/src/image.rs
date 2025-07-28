@@ -2,7 +2,9 @@ use std::sync::Arc;
 
 use base64::Engine;
 use ecow::{EcoString, eco_format};
-use hayro::{FontData, FontQuery, InterpreterSettings, RenderSettings, StandardFont};
+use hayro::{
+    FontData, FontQuery, InterpreterSettings, Pixmap, RenderSettings, StandardFont,
+};
 use image::{ImageEncoder, codecs::png::PngEncoder};
 use typst_library::foundations::Smart;
 use typst_library::layout::{Abs, Axes};
@@ -97,7 +99,12 @@ pub fn convert_image_to_base64_url(image: &Image) -> EcoString {
 }
 
 // Keep this in sync with `typst-png`!
-fn pdf_to_png(pdf: &PdfImage, w: u32, h: u32) -> Vec<u8> {
+pub fn pdf_to_png(pdf: &PdfImage, w: u32, h: u32) -> Vec<u8> {
+    let hayro_pix = pdf_to_hayro_pixmap(pdf, w, h);
+    hayro_pix.take_png()
+}
+
+pub fn pdf_to_hayro_pixmap(pdf: &PdfImage, w: u32, h: u32) -> Pixmap {
     let select_standard_font = move |font: StandardFont| -> Option<(FontData, u32)> {
         let bytes = match font {
             StandardFont::Helvetica => typst_assets::pdf::SANS,
@@ -133,7 +140,5 @@ fn pdf_to_png(pdf: &PdfImage, w: u32, h: u32) -> Vec<u8> {
         height: Some(h as u16),
     };
 
-    let hayro_pix = hayro::render(pdf.page(), &interpreter_settings, &render_settings);
-
-    hayro_pix.take_png()
+    hayro::render(pdf.page(), &interpreter_settings, &render_settings)
 }
