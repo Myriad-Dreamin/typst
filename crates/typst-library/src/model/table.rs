@@ -3,8 +3,8 @@ use std::sync::Arc;
 
 use typst_utils::NonZeroExt;
 
-use crate::diag::{bail, HintedStrResult, HintedString};
-use crate::foundations::{cast, elem, scope, Content, Packed, Smart};
+use crate::diag::{HintedStrResult, HintedString, bail};
+use crate::foundations::{Content, Packed, Smart, cast, elem, scope};
 use crate::layout::{
     Abs, Alignment, Celled, GridCell, GridFooter, GridHLine, GridHeader, GridVLine,
     Length, OuterHAlignment, OuterVAlignment, Rel, Sides, TrackSizings,
@@ -528,7 +528,7 @@ pub struct TableHLine {
 /// part of all your tables' designs.
 #[elem(name = "vline", title = "Table Vertical Line")]
 pub struct TableVLine {
-    /// The column before which the horizontal line is placed (zero-indexed).
+    /// The column before which the vertical line is placed (zero-indexed).
     /// Functions identically to the `x` field in [`grid.vline`]($grid.vline).
     pub x: Smart<usize>,
 
@@ -625,7 +625,7 @@ pub struct TableVLine {
 ///   cell(align: left)[🌴🚗],
 ///   cell(
 ///     inset: 0.06em,
-///     text(1.62em)[🛖🌅🌊],
+///     text(1.62em)[🏝️🌅🌊],
 ///   ),
 /// )
 /// ```

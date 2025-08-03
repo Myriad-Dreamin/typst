@@ -1,11 +1,12 @@
 use std::fmt::{self, Debug, Display, Formatter};
 
 use ecow::{EcoString, EcoVec};
-use typst_library::diag::{bail, HintedStrResult, StrResult};
-use typst_library::foundations::{cast, Dict, Repr, Str};
+use typst_library::diag::{HintedStrResult, StrResult, bail};
+use typst_library::foundations::{Dict, Repr, Str, StyleChain, cast};
 use typst_library::introspection::{Introspector, Tag};
-use typst_library::layout::{Abs, Frame};
+use typst_library::layout::{Abs, Frame, Point};
 use typst_library::model::DocumentInfo;
+use typst_library::text::TextElem;
 use typst_syntax::Span;
 use typst_utils::{PicoStr, ResolvedPicoStr};
 
@@ -104,8 +105,53 @@ impl HtmlTag {
             bail!("tag name must not be empty");
         }
 
-        if let Some(c) = string.chars().find(|&c| !charsets::is_valid_in_tag_name(c)) {
-            bail!("the character {} is not valid in a tag name", c.repr());
+        let mut has_hyphen = false;
+        let mut has_uppercase = false;
+
+        for c in string.chars() {
+            if c == '-' {
+                has_hyphen = true;
+            } else if !charsets::is_valid_in_tag_name(c) {
+                bail!("the character {} is not valid in a tag name", c.repr());
+            } else {
+                has_uppercase |= c.is_ascii_uppercase();
+            }
+        }
+
+        // If we encounter a hyphen, we are dealing with a custom element rather
+        // than a standard HTML element.
+        //
+        // A valid custom element name must:
+        // - Contain at least one hyphen (U+002D)
+        // - Start with an ASCII lowercase letter (a-z)
+        // - Not contain any ASCII uppercase letters (A-Z)
+        // - Not be one of the reserved names
+        // - Only contain valid characters (ASCII alphanumeric and hyphens)
+        //
+        // See https://html.spec.whatwg.org/multipage/custom-elements.html#valid-custom-element-name
+        if has_hyphen {
+            if !string.starts_with(|c: char| c.is_ascii_lowercase()) {
+                bail!("custom element name must start with a lowercase letter");
+            }
+            if has_uppercase {
+                bail!("custom element name must not contain uppercase letters");
+            }
+
+            // These names are used in SVG and MathML. Since `html.elem` only
+            // supports creation of _HTML_ elements, they are forbidden.
+            if matches!(
+                string,
+                "annotation-xml"
+                    | "color-profile"
+                    | "font-face"
+                    | "font-face-src"
+                    | "font-face-uri"
+                    | "font-face-format"
+                    | "font-face-name"
+                    | "missing-glyph"
+            ) {
+                bail!("name is reserved and not valid for a custom element");
+            }
         }
 
         Ok(Self(PicoStr::intern(string)))
@@ -171,9 +217,19 @@ impl HtmlAttrs {
         Self::default()
     }
 
-    /// Add an attribute.
+    /// Adds an attribute.
     pub fn push(&mut self, attr: HtmlAttr, value: impl Into<EcoString>) {
         self.0.push((attr, value.into()));
+    }
+
+    /// Adds an attribute to the start of the list.
+    pub fn push_front(&mut self, attr: HtmlAttr, value: impl Into<EcoString>) {
+        self.0.insert(0, (attr, value.into()));
+    }
+
+    /// Finds an attribute value.
+    pub fn get(&self, attr: HtmlAttr) -> Option<&EcoString> {
+        self.0.iter().find(|&&(k, _)| k == attr).map(|(_, v)| v)
     }
 }
 
@@ -278,4 +334,20 @@ pub struct HtmlFrame {
     /// frame with em units to make text in and outside of the frame sized
     /// consistently.
     pub text_size: Abs,
+    /// An ID to assign to the SVG itself.
+    pub id: Option<EcoString>,
+    /// IDs to assign to destination jump points within the SVG.
+    pub link_points: Vec<(Point, EcoString)>,
+}
+
+impl HtmlFrame {
+    /// Wraps a laid-out frame.
+    pub fn new(inner: Frame, styles: StyleChain) -> Self {
+        Self {
+            inner,
+            text_size: styles.resolve(TextElem::size),
+            id: None,
+            link_points: vec![],
+        }
+    }
 }

@@ -1,15 +1,16 @@
 //! Typst's HTML exporter.
 
 mod attr;
-mod charsets;
+pub mod charsets;
 mod convert;
 mod css;
 mod document;
 mod dom;
 mod encode;
 mod fragment;
+mod link;
 mod rules;
-mod tag;
+pub mod tag;
 mod typed;
 
 pub use self::document::html_document;
@@ -18,8 +19,8 @@ pub use self::encode::html;
 pub use self::rules::register;
 
 use ecow::EcoString;
-use typst_library::foundations::{Content, Module, Scope};
 use typst_library::Category;
+use typst_library::foundations::{Content, Module, Scope};
 use typst_macros::elem;
 
 /// Creates the module with all HTML definitions.
@@ -77,6 +78,15 @@ impl HtmlElem {
             .get_or_insert_with(Default::default)
             .push(attr, value);
         self
+    }
+
+    /// Adds the attribute to the element if value is not `None`.
+    pub fn with_optional_attr(
+        self,
+        attr: HtmlAttr,
+        value: Option<impl Into<EcoString>>,
+    ) -> Self {
+        if let Some(value) = value { self.with_attr(attr, value) } else { self }
     }
 
     /// Adds CSS styles to an element.

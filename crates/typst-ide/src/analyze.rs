@@ -1,11 +1,10 @@
-use std::collections::HashSet;
-
 use comemo::Track;
-use ecow::{eco_vec, EcoString, EcoVec};
+use ecow::{EcoString, EcoVec, eco_vec};
+use rustc_hash::FxHashSet;
 use typst::foundations::{Label, Styles, Value};
 use typst::layout::PagedDocument;
 use typst::model::{BibliographyElem, FigureElem};
-use typst::syntax::{ast, LinkedNode, SyntaxKind};
+use typst::syntax::{LinkedNode, SyntaxKind, ast};
 
 use crate::IdeWorld;
 
@@ -27,16 +26,17 @@ pub fn analyze_expr(
         ast::Expr::Numeric(v) => Value::numeric(v.get()),
         ast::Expr::Str(v) => Value::Str(v.get().into()),
         _ => {
-            if node.kind() == SyntaxKind::Contextual {
-                if let Some(child) = node.children().next_back() {
-                    return analyze_expr(world, &child);
-                }
+            if node.kind() == SyntaxKind::Contextual
+                && let Some(child) = node.children().next_back()
+            {
+                return analyze_expr(world, &child);
             }
 
-            if let Some(parent) = node.parent() {
-                if parent.kind() == SyntaxKind::FieldAccess && node.index() > 0 {
-                    return analyze_expr(world, parent);
-                }
+            if let Some(parent) = node.parent()
+                && parent.kind() == SyntaxKind::FieldAccess
+                && node.index() > 0
+            {
+                return analyze_expr(world, parent);
             }
 
             return typst::trace::<PagedDocument>(world.upcast(), node.span());
@@ -75,7 +75,7 @@ pub fn analyze_labels(
     document: &PagedDocument,
 ) -> (Vec<(Label, Option<EcoString>)>, usize) {
     let mut output = vec![];
-    let mut seen_labels = HashSet::new();
+    let mut seen_labels = FxHashSet::default();
 
     // Labels in the document.
     for elem in document.introspector.all() {

@@ -1,39 +1,40 @@
 use std::any::TypeId;
-use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fmt::{self, Debug, Formatter};
 use std::path::Path;
 use std::sync::{Arc, LazyLock};
 
 use comemo::{Track, Tracked};
-use ecow::{eco_format, EcoString, EcoVec};
+use ecow::{EcoString, EcoVec, eco_format};
 use hayagriva::archive::ArchivedStyle;
 use hayagriva::io::BibLaTeXError;
 use hayagriva::{
-    citationberg, BibliographyDriver, BibliographyRequest, CitationItem, CitationRequest,
-    Library, SpecificLocator,
+    BibliographyDriver, BibliographyRequest, CitationItem, CitationRequest, Library,
+    SpecificLocator, citationberg,
 };
 use indexmap::IndexMap;
-use smallvec::{smallvec, SmallVec};
+use rustc_hash::{FxBuildHasher, FxHashMap};
+use smallvec::{SmallVec, smallvec};
 use typst_syntax::{Span, Spanned, SyntaxMode};
 use typst_utils::{ManuallyHash, PicoStr};
 
+use crate::World;
 use crate::diag::{
-    bail, error, At, HintedStrResult, LoadError, LoadResult, LoadedWithin, ReportPos,
-    SourceResult, StrResult,
+    At, HintedStrResult, LoadError, LoadResult, LoadedWithin, ReportPos, SourceResult,
+    StrResult, bail, error,
 };
 use crate::engine::{Engine, Sink};
 use crate::foundations::{
-    elem, Bytes, CastInfo, Content, Derived, FromValue, IntoValue, Label, NativeElement,
+    Bytes, CastInfo, Content, Derived, FromValue, IntoValue, Label, NativeElement,
     OneOrMultiple, Packed, Reflect, Scope, ShowSet, Smart, StyleChain, Styles,
-    Synthesize, Value,
+    Synthesize, Value, elem,
 };
 use crate::introspection::{Introspector, Locatable, Location};
 use crate::layout::{
     BlockBody, BlockElem, Em, GridCell, GridChild, GridElem, GridItem, HElem, PadElem,
     Sizing, TrackSizings,
 };
-use crate::loading::{format_yaml_error, DataSource, Load, LoadSource, Loaded};
+use crate::loading::{DataSource, Load, LoadSource, Loaded, format_yaml_error};
 use crate::model::{
     CitationForm, CiteGroup, Destination, FootnoteElem, HeadingElem, LinkElem, Url,
 };
@@ -42,7 +43,6 @@ use crate::text::{
     FontStyle, Lang, LocalName, Region, Smallcaps, SubElem, SuperElem, TextElem,
     WeightDelta,
 };
-use crate::World;
 
 /// A bibliography / reference listing.
 ///
@@ -217,7 +217,9 @@ impl LocalName for Packed<BibliographyElem> {
 
 /// A loaded bibliography.
 #[derive(Clone, PartialEq, Hash)]
-pub struct Bibliography(Arc<ManuallyHash<IndexMap<Label, hayagriva::Entry>>>);
+pub struct Bibliography(
+    Arc<ManuallyHash<IndexMap<Label, hayagriva::Entry, FxBuildHasher>>>,
+);
 
 impl Bibliography {
     /// Load a bibliography from data sources.
@@ -234,7 +236,7 @@ impl Bibliography {
     #[comemo::memoize]
     #[typst_macros::time(name = "load bibliography")]
     fn decode(data: &[Loaded]) -> SourceResult<Bibliography> {
-        let mut map = IndexMap::new();
+        let mut map = IndexMap::default();
         let mut duplicates = Vec::<EcoString>::new();
 
         // We might have multiple bib/yaml files
@@ -486,7 +488,7 @@ impl IntoValue for CslSource {
 /// citations to do it.
 pub struct Works {
     /// Maps from the location of a citation group to its rendered content.
-    pub citations: HashMap<Location, SourceResult<Content>>,
+    pub citations: FxHashMap<Location, SourceResult<Content>>,
     /// Lists all references in the bibliography, with optional prefix, or
     /// `None` if the citation style can't be used for bibliographies.
     pub references: Option<Vec<(Option<Content>, Content)>>,
@@ -528,7 +530,7 @@ struct Generator<'a> {
     /// bibliography driver and needed when processing hayagriva's output.
     infos: Vec<GroupInfo>,
     /// Citations with unresolved keys.
-    failures: HashMap<Location, SourceResult<Content>>,
+    failures: FxHashMap<Location, SourceResult<Content>>,
 }
 
 /// Details about a group of merged citations. All citations are put into groups
@@ -571,7 +573,7 @@ impl<'a> Generator<'a> {
             bibliography,
             groups,
             infos,
-            failures: HashMap::new(),
+            failures: FxHashMap::default(),
         })
     }
 
@@ -702,10 +704,10 @@ impl<'a> Generator<'a> {
     fn display_citations(
         &mut self,
         rendered: &hayagriva::Rendered,
-    ) -> StrResult<HashMap<Location, SourceResult<Content>>> {
+    ) -> StrResult<FxHashMap<Location, SourceResult<Content>>> {
         // Determine for each citation key where in the bibliography it is,
         // so that we can link there.
-        let mut links = HashMap::new();
+        let mut links = FxHashMap::default();
         if let Some(bibliography) = &rendered.bibliography {
             let location = self.bibliography.location().unwrap();
             for (k, item) in bibliography.items.iter().enumerate() {
@@ -760,7 +762,7 @@ impl<'a> Generator<'a> {
 
         // Determine for each citation key where it first occurred, so that we
         // can link there.
-        let mut first_occurrences = HashMap::new();
+        let mut first_occurrences = FxHashMap::default();
         for info in &self.infos {
             for subinfo in &info.subinfos {
                 let key = subinfo.key.resolve();
@@ -927,11 +929,11 @@ impl ElemRenderer<'_> {
             _ => {}
         }
 
-        if let Some(hayagriva::ElemMeta::Entry(i)) = elem.meta {
-            if let Some(location) = (self.link)(i) {
-                let dest = Destination::Location(location);
-                content = content.linked(dest);
-            }
+        if let Some(hayagriva::ElemMeta::Entry(i)) = elem.meta
+            && let Some(location) = (self.link)(i)
+        {
+            let dest = Destination::Location(location);
+            content = content.linked(dest);
         }
 
         Ok(content)

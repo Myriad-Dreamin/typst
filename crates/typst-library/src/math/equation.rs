@@ -7,7 +7,7 @@ use unicode_math_class::MathClass;
 use crate::diag::SourceResult;
 use crate::engine::Engine;
 use crate::foundations::{
-    elem, Content, NativeElement, Packed, ShowSet, Smart, StyleChain, Styles, Synthesize,
+    Content, NativeElement, Packed, ShowSet, Smart, StyleChain, Styles, Synthesize, elem,
 };
 use crate::introspection::{Count, Counter, CounterUpdate, Locatable};
 use crate::layout::{
@@ -168,7 +168,6 @@ impl ShowSet for Packed<EquationElem> {
     fn show_set(&self, styles: StyleChain) -> Styles {
         let mut out = Styles::new();
         if self.block.get(styles) {
-            out.set(AlignElem::alignment, Alignment::CENTER);
             out.set(AlignElem::alignment, Alignment::CENTER);
             out.set(BlockElem::breakable, false);
             out.set(ParLine::numbering, None);
