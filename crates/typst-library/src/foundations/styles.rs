@@ -327,12 +327,8 @@ impl Property {
 
 impl Debug for Property {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(
-            f,
-            "Set({}.{}: ",
-            self.elem.name(),
-            self.elem.field_name(self.id).unwrap()
-        )?;
+        let field_name = self.elem.field_name(self.id).unwrap_or("<anonymous-field>");
+        write!(f, "Set({}.{field_name}: ", self.elem.name())?;
         self.value.fmt(f)?;
         write!(f, ")")
     }
@@ -932,10 +928,10 @@ impl Fold for Depth {
 
 #[cold]
 fn block_wrong_type(func: Element, id: u8, value: &Block) -> ! {
+    let field_name = func.field_name(id).unwrap_or("<anonymous-field>");
     panic!(
-        "attempted to read a value of a different type than was written {}.{}: {:?}",
+        "attempted to read a value of a different type than was written {}.{field_name}: {:?}",
         func.name(),
-        func.field_name(id).unwrap(),
         value
     )
 }
