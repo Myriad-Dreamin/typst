@@ -360,6 +360,7 @@ impl Eval for ast::Contextual<'_> {
             defaults: vec![],
             captured,
             num_pos_params: 0,
+            prefer_cache: false,
         };
 
         let func = Func::from(closure).spanned(body.span());

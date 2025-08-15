@@ -203,6 +203,14 @@ impl Func {
         }
     }
 
+    /// Whether the function is preferrable to cache.
+    pub fn prefer_cache(&self) -> bool {
+        match &self.repr {
+            Repr::Closure(closure) => closure.prefer_cache,
+            _ => true,
+        }
+    }
+
     /// Get details about this function's parameters if available.
     pub fn params(&self) -> Option<&'static [ParamInfo]> {
         match &self.repr {
@@ -585,7 +593,9 @@ pub struct Closure {
     /// Captured values from outer scopes.
     pub captured: Scope,
     /// The number of positional parameters in the closure.
-    pub num_pos_params: usize,
+    pub num_pos_params: u16,
+    /// Whether the closure is preferable to be cached.
+    pub prefer_cache: bool,
 }
 
 impl Closure {

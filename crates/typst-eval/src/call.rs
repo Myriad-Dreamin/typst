@@ -152,6 +152,31 @@ impl Eval for ast::Closure<'_> {
             visitor.finish()
         };
 
+        let prefer_cache = !self.span().id().is_some_and(|s| {
+            s.package().is_some_and(|p| p.name == "cetz") && {
+                let p = s.vpath().as_rooted_path();
+                p == std::path::Path::new("/src/coordinate.typ")
+                    || p == std::path::Path::new("/src/lib/palette.typ")
+                    || p == std::path::Path::new("/src/complex.typ")
+                    || p == std::path::Path::new("/src/vector.typ")
+                    || p == std::path::Path::new("/src/matrix.typ")
+                    || p == std::path::Path::new("/src/utils.typ")
+                    || p == std::path::Path::new("/src/util.typ")
+                    || p == std::path::Path::new("/src/path-util.typ")
+            }
+        }) && {
+            // let prefer_cache =
+            //     PreferCacheVisitor::new(Some(&vm.scopes)).check(self.to_untyped());
+            // eprintln!(
+            //     "Checking closure for cache preference... {:?} {prefer_cache} in {:?}",
+            //     self.name(),
+            //     self.span().id()
+            // );
+            // prefer_cache
+
+            true
+        };
+
         // Define the closure.
         let closure = Closure {
             node: self.to_untyped().clone(),
@@ -161,7 +186,8 @@ impl Eval for ast::Closure<'_> {
                 .params()
                 .children()
                 .filter(|p| matches!(p, ast::Param::Pos(_)))
-                .count(),
+                .count() as u16,
+            prefer_cache,
         };
 
         Ok(Value::Func(Func::from(closure).spanned(self.params().span())))
@@ -169,9 +195,67 @@ impl Eval for ast::Closure<'_> {
 }
 
 /// Call the function in the context with the arguments.
-#[comemo::memoize]
 #[allow(clippy::too_many_arguments)]
 pub fn eval_closure(
+    func: &Func,
+    closure: &LazyHash<Closure>,
+    routines: &Routines,
+    world: Tracked<dyn World + '_>,
+    introspector: Tracked<Introspector>,
+    traced: Tracked<Traced>,
+    sink: TrackedMut<Sink>,
+    route: Tracked<Route>,
+    context: Tracked<Context>,
+    args: Args,
+) -> SourceResult<Value> {
+    let eval_impl =
+        if closure.prefer_cache { eval_closure_cached } else { eval_closure_impl };
+    eval_impl(
+        func,
+        closure,
+        routines,
+        world,
+        introspector,
+        traced,
+        sink,
+        route,
+        context,
+        args,
+    )
+}
+
+/// Call the function in the context with the arguments.
+#[comemo::memoize]
+#[allow(clippy::too_many_arguments)]
+pub fn eval_closure_cached(
+    func: &Func,
+    closure: &LazyHash<Closure>,
+    routines: &Routines,
+    world: Tracked<dyn World + '_>,
+    introspector: Tracked<Introspector>,
+    traced: Tracked<Traced>,
+    sink: TrackedMut<Sink>,
+    route: Tracked<Route>,
+    context: Tracked<Context>,
+    args: Args,
+) -> SourceResult<Value> {
+    eval_closure_impl(
+        func,
+        closure,
+        routines,
+        world,
+        introspector,
+        traced,
+        sink,
+        route,
+        context,
+        args,
+    )
+}
+
+/// Call the function in the context with the arguments.
+#[allow(clippy::too_many_arguments)]
+pub fn eval_closure_impl(
     func: &Func,
     closure: &LazyHash<Closure>,
     routines: &Routines,
@@ -212,7 +296,7 @@ pub fn eval_closure(
     }
 
     let num_pos_args = args.to_pos().len();
-    let sink_size = num_pos_args.checked_sub(closure.num_pos_params);
+    let sink_size = num_pos_args.checked_sub(closure.num_pos_params as usize);
 
     let mut sink = None;
     let mut sink_pos_values = None;
@@ -615,9 +699,228 @@ impl<'a> CapturesVisitor<'a> {
     }
 }
 
+/// A visitor that determines whether a closure is preferable to cache.
+pub struct PreferCacheVisitor<'a> {
+    external: Option<&'a Scopes<'a>>,
+    internal: Scopes<'a>,
+    prefer_cache: bool,
+}
+
+impl<'a> PreferCacheVisitor<'a> {
+    /// Create a new visitor for the given external scopes.
+    pub fn new(external: Option<&'a Scopes<'a>>) -> Self {
+        Self {
+            external,
+            internal: Scopes::new(None),
+            prefer_cache: false,
+        }
+    }
+
+    /// Return the scope of captured variables.
+    pub fn check(mut self, node: &SyntaxNode) -> bool {
+        self.prefer_cache = false;
+        self.visit(node);
+        !self.prefer_cache
+    }
+
+    /// Visit any node and collect all captured variables.
+    fn visit(&mut self, node: &SyntaxNode) {
+        if self.prefer_cache {
+            // If we already decided that the closure is preferable to cache,
+            // we don't need to check it again.
+            return;
+        }
+
+        match node.cast() {
+            // Every identifier is a potential variable that we need to capture.
+            // Identifiers that shouldn't count as captures because they
+            // actually bind a new name are handled below (individually through
+            // the expressions that contain them).
+            Some(ast::Expr::Ident(ident)) => self.do_check(ident.get(), Scopes::get),
+            Some(ast::Expr::MathIdent(ident)) => {
+                self.do_check(ident.get(), Scopes::get_in_math)
+            }
+
+            // Code and content blocks create a scope.
+            Some(ast::Expr::ContentBlock(_)) => {
+                self.prefer_cache = true;
+            }
+
+            // Code and content blocks create a scope.
+            Some(ast::Expr::CodeBlock(_)) => {
+                if node.children().len() > 32 {
+                    self.prefer_cache = true;
+                    return;
+                }
+
+                self.internal.enter();
+                for child in node.children() {
+                    self.visit(child);
+                }
+                self.internal.exit();
+            }
+
+            // Don't capture the field of a field access.
+            Some(ast::Expr::FieldAccess(access)) => {
+                self.visit(access.target().to_untyped());
+            }
+
+            // A closure contains parameter bindings, which are bound before the
+            // body is evaluated. Care must be taken so that the default values
+            // of named parameters cannot access previous parameter bindings.
+            Some(ast::Expr::Closure(expr)) => {
+                for param in expr.params().children() {
+                    if let ast::Param::Named(named) = param {
+                        self.visit(named.expr().to_untyped());
+                    }
+                }
+
+                self.internal.enter();
+                if let Some(name) = expr.name() {
+                    self.bind(name);
+                }
+
+                for param in expr.params().children() {
+                    match param {
+                        ast::Param::Pos(pattern) => {
+                            for ident in pattern.bindings() {
+                                self.bind(ident);
+                            }
+                        }
+                        ast::Param::Named(named) => self.bind(named.name()),
+                        ast::Param::Spread(spread) => {
+                            if let Some(ident) = spread.sink_ident() {
+                                self.bind(ident);
+                            }
+                        }
+                    }
+                }
+
+                self.visit(expr.body().to_untyped());
+                self.internal.exit();
+            }
+
+            // A let expression contains a binding, but that binding is only
+            // active after the body is evaluated.
+            Some(ast::Expr::LetBinding(expr)) => {
+                if let Some(init) = expr.init() {
+                    self.visit(init.to_untyped());
+                }
+
+                for ident in expr.kind().bindings() {
+                    self.bind(ident);
+                }
+            }
+
+            Some(ast::Expr::ForLoop(..) | ast::Expr::WhileLoop(..)) => {
+                self.prefer_cache = true;
+            }
+
+            // An import contains items, but these are active only after the
+            // path is evaluated.
+            Some(ast::Expr::ModuleImport(expr)) => {
+                self.visit(expr.source().to_untyped());
+                if let Some(ast::Imports::Items(items)) = expr.imports() {
+                    for item in items.iter() {
+                        self.bind(item.bound_name());
+                    }
+                }
+            }
+
+            expr => {
+                // An import contains items, but these are active only after the
+                // path is evaluated.
+                if let Some(ast::Expr::FuncCall(func)) = expr {
+                    if !matches!(
+                        func.callee(),
+                        ast::Expr::Ident(_) | ast::Expr::FieldAccess(_)
+                    ) {
+                        return;
+                    }
+                }
+                // Never capture the name part of a named pair.
+                if let Some(named) = node.cast::<ast::Named>() {
+                    self.visit(named.expr().to_untyped());
+                    return;
+                }
+
+                // Everything else is traversed from left to right.
+                for child in node.children() {
+                    self.visit(child);
+                }
+            }
+        }
+    }
+
+    /// Bind a new internal variable.
+    fn bind(&mut self, ident: ast::Ident) {
+        // The concrete value does not matter as we only use the scoping
+        // mechanism of `Scopes`, not the values themselves.
+        self.internal
+            .top
+            .bind(ident.get().clone(), Binding::detached(Value::None));
+    }
+
+    /// Capture a variable if it isn't internal.
+    fn do_check(
+        &mut self,
+        ident: &EcoString,
+        getter: impl FnOnce(&'a Scopes<'a>, &str) -> HintedStrResult<&'a Binding>,
+    ) {
+        if self.internal.get(ident).is_ok() {
+            return;
+        }
+
+        match self.external {
+            Some(external) => {
+                let Ok(binding) = getter(external, ident) else {
+                    self.prefer_cache = true;
+                    return;
+                };
+                match binding.read() {
+                    Value::Module(m)
+                        if matches!(m.name().map(EcoString::as_str), Some("calc")) => {}
+                    Value::Func(m) if m.prefer_cache() => {}
+                    Value::None
+                    | Value::Auto
+                    | Value::Bool(..)
+                    | Value::Int(..)
+                    | Value::Float(..)
+                    | Value::Length(..)
+                    | Value::Angle(..)
+                    | Value::Ratio(..)
+                    | Value::Relative(..)
+                    | Value::Fraction(..)
+                    | Value::Color(..)
+                    | Value::Gradient(..)
+                    | Value::Tiling(..)
+                    | Value::Str(..)
+                    | Value::Bytes(..)
+                    | Value::Label(..)
+                    | Value::Datetime(..)
+                    | Value::Decimal(..)
+                    | Value::Duration(..)
+                    | Value::Array(..)
+                    | Value::Dict(..)
+                    | Value::Type(..) => {}
+                    Value::Func(m) if m.prefer_cache() => {}
+                    _ => {
+                        self.prefer_cache = true;
+                    }
+                }
+            }
+            // The external scopes are only `None` when we are doing IDE capture
+            // analysis, in which case the concrete value doesn't matter.
+            None => {
+                self.prefer_cache = true;
+            }
+        };
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use typst_syntax::parse;
+    use typst_syntax::{parse, parse_code};
 
     use super::*;
 
@@ -632,6 +935,12 @@ mod tests {
         names.sort();
 
         assert_eq!(names, result);
+    }
+
+    #[track_caller]
+    fn prefer_cache(scopes: &Scopes, text: &str) -> bool {
+        let visitor = PreferCacheVisitor::new(Some(scopes));
+        visitor.check(&parse_code(text))
     }
 
     #[test]
@@ -725,5 +1034,20 @@ mod tests {
         test(s, "$ foo.x-bar $", &["bar", "foo"]);
         test(s, "$ foo.x_bar $", &["bar", "foo"]);
         test(s, "$ #x_bar.x-bar $", &["x_bar"]);
+    }
+
+    #[test]
+    fn test_prefer_cache() {
+        let mut scopes = Scopes::new(None);
+        scopes.top.define("x", 0);
+        scopes.top.define("y", 0);
+        scopes.top.define("z", 0);
+        let s = &scopes;
+
+        assert!(prefer_cache(s, "x + y"));
+        assert!(prefer_cache(s, "if true { x } else { y }"));
+        assert!(!prefer_cache(s, "#calc.sqrt(1)"));
+        assert!(!prefer_cache(s, "#sqrt(1)"));
+        assert!(!prefer_cache(s, "#color.rgb(1, 2, 3)"));
     }
 }
