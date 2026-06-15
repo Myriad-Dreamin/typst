@@ -311,10 +311,7 @@ impl Repr for Selector {
                     let dict = dict
                         .iter()
                         .map(|(id, value)| {
-                            (
-                                elem.field_name(*id).unwrap_or("internal"),
-                                value.clone(),
-                            )
+                            (elem.field_name(*id).unwrap_or("internal"), value.clone())
                         })
                         .map(|(name, value)| (EcoString::from(name).into(), value))
                         .collect::<Dict>();
