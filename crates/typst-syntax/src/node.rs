@@ -1110,23 +1110,38 @@ impl<'a> LinkedNode<'a> {
             return Some(self.clone());
         }
 
+        let NodeRef::Inner(inner) = self.node.node_ref() else {
+            return None;
+        };
+
         // The parent of a subtree has a smaller span number than all of its
         // descendants. Therefore, we can bail out early if the target span's
         // number is smaller than our number.
-        if self.node.is_inner() && number < target.0 {
-            // Use `self.children()`, not `inner.children()` to preserve being
-            // in a `LinkedNode`.
-            let mut children = self.children().peekable();
-            while let Some(child) = children.next() {
-                // Every node in this child's subtree has a smaller span number than
-                // the next sibling. Therefore we only need to recurse if the next
-                // sibling's span number is larger than the target span's number.
-                if children.peek().is_none_or(|next| next.span().number() > target.0)
-                    && let Some(found) = child.find_number(target)
-                {
-                    return Some(found);
-                }
+        if number < target.0 {
+            // Find the first child whose subtree upper bound exceeds the target.
+            let idx = inner.children.partition_point(|child| child.upper() <= target.0);
+            let child = inner.children.get(idx)?;
+            if child.span().number() > target.0 {
+                return None;
             }
+
+            // Recover the child's byte offset once the target subtree is known.
+            let children = inner.children.as_slice();
+            let offset = if idx <= children.len() / 2 {
+                self.offset + children[..idx].iter().map(SyntaxNode::len).sum::<usize>()
+            } else {
+                let suffix =
+                    children[idx + 1..].iter().map(SyntaxNode::len).sum::<usize>();
+                self.offset + self.len() - suffix - child.len()
+            };
+
+            let child = Self {
+                node: child,
+                parent: Some(Rc::new(self.clone())),
+                index: idx,
+                offset,
+            };
+            return child.find_number(target);
         }
 
         None

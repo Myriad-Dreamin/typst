@@ -156,8 +156,40 @@ impl AsRef<str> for Source {
 
 #[cfg(test)]
 mod test {
+    use std::ops::Range;
+
     use super::Source;
-    use crate::{LinkedNode, Side, Span, SubRange};
+    use crate::{LinkedNode, Side, Span, SpanNumber, SubRange, SyntaxNode};
+
+    fn old_find_number(node: LinkedNode<'_>, target: SpanNumber) -> Option<Range<usize>> {
+        let number = node.span().number();
+        if number == target.0 {
+            return Some(node.range());
+        }
+
+        if node.get().is_inner() && number < target.0 {
+            let mut children = node.children().peekable();
+            while let Some(child) = children.next() {
+                if children.peek().is_none_or(|next| next.span().number() > target.0)
+                    && let Some(found) = old_find_number(child, target)
+                {
+                    return Some(found);
+                }
+            }
+        }
+
+        None
+    }
+
+    fn collect_numbered_spans(node: &SyntaxNode, out: &mut Vec<Span>) {
+        let span = node.span();
+        if matches!(span.get(), crate::SpanKind::Number { .. }) {
+            out.push(span);
+        }
+        for child in node.children() {
+            collect_numbered_spans(child, out);
+        }
+    }
 
     #[test]
     fn test_source_sub_ranges() {
@@ -178,5 +210,32 @@ mod test {
         assert_eq!(get(root, SubRange::new(3, 10)), "ead <la");
         assert_eq!(get(root, SubRange::new(0, 10)), "= head <la");
         assert_eq!(get(root, SubRange::new(3, 14)), "ead <label>");
+    }
+
+    #[test]
+    fn test_source_range_matches_previous_find_number() {
+        let text = r#"
+#let flat = (
+  alpha,
+  beta,
+  gamma,
+  delta,
+)
+
+#for i in range(8) {
+  #let entry = (i, i + 1, i + 2)
+  #entry
+}
+"#;
+        let source = Source::detached(text);
+        let mut spans = Vec::new();
+        collect_numbered_spans(source.root(), &mut spans);
+
+        let root = LinkedNode::new(source.root());
+        for span in spans {
+            let old = old_find_number(root.clone(), SpanNumber(span.number()));
+            let new = source.range(SpanNumber(span.number()), None);
+            assert_eq!(new, old);
+        }
     }
 }
